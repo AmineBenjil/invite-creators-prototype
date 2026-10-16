@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Invite Creators</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- ===== Background page ===== -->
+  <aside class="sidebar">
+    <div class="logo"><img src="assets/benable.png" alt="Benable" width="122" height="32"></div>
+    <nav class="nav">
+      <div class="nav-label">Platform</div>
+      <div class="nav-links">
+        <a class="nav-link active">
+          <span class="ico16"><span class="vec" style="inset:12.5% 9.38% 8.33% 9.37%"><img src="assets/nav-campaigns.svg" alt=""></span></span>
+          <span class="nav-text">Campaigns</span>
+        </a>
+        <a class="nav-link">
+          <span class="ico16"><span class="vec" style="inset:8.33% 8.34% 2.09% 8.33%"><img src="assets/nav-push.svg" alt=""></span></span>
+          <span class="nav-text">Push Alerts</span><span class="soon">Soon</span>
+        </a>
+        <a class="nav-link">
+          <span class="ico16"><span class="vec" style="inset:4.25% 4.42% 4.17% 4.42%"><img src="assets/nav-intel.svg" alt=""></span></span>
+          <span class="nav-text">Brand Intelligence</span><span class="soon">Soon</span>
+        </a>
+        <a class="nav-link">
+          <span class="ico16"><span class="vec" style="inset:8.33% 8.34% 8.34% 8.33%"><img src="assets/nav-ugc.svg" alt=""></span></span>
+          <span class="nav-text">UGC Studio</span><span class="soon">Soon</span>
+        </a>
+      </div>
+    </nav>
+    <div class="side-divider"></div>
+    <div class="side-user"><span class="side-avatar"></span><span>Pikora</span></div>
+  </aside>
+
+  <header class="page-head">
+    <a class="back"><img src="assets/chevron-left-16.svg" alt="" width="16" height="16"><span>Campaigns</span></a>
+    <div class="title-row">
+      <div class="title-wrap">
+        <h1>Pikora Instant Bone Broth Collection</h1>
+        <span class="status"><i></i>Recruiting</span>
+      </div>
+      <button class="brief-btn" id="openModal">
+        <span class="ico16"><span class="vec" style="inset:20.56% 8.33% 20.53% 8.35%"><img src="assets/brief.svg" alt=""></span></span>
+        <span>Campaign Brief</span>
+      </button>
+    </div>
+    <div class="tabs">
+      <span class="tab active" style="width:100.391px">Dashboard</span>
+      <span class="tab" style="width:77.719px">Content</span>
+    </div>
+  </header>
+
+  <!-- ===== Modal ===== -->
+  <div class="overlay" id="overlay"></div>
+  <div class="modal" data-step="1" id="modal" role="dialog" aria-label="Invite Creators">
+    <!-- Right panel -->
+    <div class="right">
+      <button class="cta" id="inviteAll">
+        <span class="cta-left">
+          <span class="cta-icon"><img src="assets/send-20.svg" alt="" width="20" height="20"></span>
+          <span class="cta-text">
+            <span class="cta-title">Invite all <span>(30)</span></span>
+            <span class="cta-sub">Review the list before it goes out</span>
+          </span>
+        </span>
+        <img src="assets/chevron-right-16.svg" alt="" width="16" height="16">
+      </button>
+
+      <div class="or-row">
+        <div class="or-line"><img src="assets/line-or-2.svg" alt=""></div>
+        <span>Or</span>
+        <div class="or-line"><img src="assets/line-or-2.svg" alt=""></div>
+      </div>
+
+      <div class="sl-empty" id="slEmpty" hidden>
+        <span class="sl-empty-icon"><span class="ico16"><span class="vec" style="inset:8.35% 12.5% 8.32% 12.5%"><img src="assets/user-add.svg" alt=""></span></span></span>
+        <div class="sl-empty-text">
+          <p class="sl-empty-title">Start your shortlist</p>
+          <p class="sl-empty-body">Add the creators you’d love to work with. Star your top picks and they’re invited first.</p>
+        </div>
+      </div>
+
+      <div class="lists">
+        <div class="group">
+          <p class="group-title">Priority</p>
+          <div class="list priority" id="priorityList"></div>
+        </div>
+        <div class="group">
+          <p class="group-title" id="othersTitle">Others</p>
+          <div class="list" id="everyoneList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Header -->
+    <div class="m-head">
+      <p class="m-title">Invite Creators</p>
+      <button class="m-close" id="closeModal" aria-label="Close"><img src="assets/close-16.svg" alt="" width="16" height="16"></button>
+      <div class="steps">
+        <div class="step">
+          <span class="step-num on">1</span>
+          <span class="step-label on">Creators you know</span>
+        </div>
+        <div class="step-line"><img class="s1-only" src="assets/line-step.svg" alt=""><img class="s2-only" src="assets/line-step-2.svg" alt=""></div>
+        <div class="step step-2">
+          <span class="step-num">2</span>
+          <span class="step-label">New suggestions</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Banner -->
+    <div class="banner">
+      <div class="banner-inner">
+        <span class="banner-emoji">🥳</span>
+        <p>To fill your campaign quickly, <b>invite at least XX</b> creators. Roughly 40% of invited creators usually accept, compared to industry average of 10%</p>
+      </div>
+    </div>
+
+    <!-- Main card -->
+    <div class="card s1-only">
+      <div class="card-head"><b>Start with creators you know</b><span>(<span id="knownCount">8</span>)</span><button class="prioritize-all" id="prioritizeAll">Prioritize all</button></div>
+      <div class="table">
+        <div class="thead">
+          <span style="left:16px">Creator</span>
+          <span style="left:325.5px">For you</span>
+          <button class="filter-btn" id="filterBtn" aria-label="Filter by For you" aria-haspopup="true" aria-expanded="false"><img src="assets/filter-16.svg" alt="" width="16" height="16"></button>
+          <span style="right:16px">Shortlist &amp; Prioritize</span>
+        </div>
+        <div class="rows" id="rows"></div>
+      </div>
+      <div class="filter-pop" id="filterPop" role="menu" hidden></div>
+    </div>
+
+    <!-- Step 2: suggested creator -->
+    <div class="suggest-back s2-only"><div></div></div>
+    <div class="suggest s2-only">
+      <div id="sgBody"></div>
+
+      <div class="sg-foot">
+        <div class="sg-actions">
+          <button class="btn-ghost">Not a Fit</button>
+          <div class="split lg" id="sgSplit">
+            <button class="split-add" id="sgAdd"><img id="sgAddIcon" src="assets/plus-12.svg" alt="" width="12" height="12"><span id="sgAddLabel">Add</span></button>
+            <button class="split-star" id="sgStar" aria-label="Priority invite"><img id="sgStarIcon" src="assets/star-20-off.svg" alt="" width="20" height="20"></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pager s2-only">
+      <button class="pager-btn prev" id="pgPrev" disabled aria-label="Previous"><img src="assets/chevron-left-16-dark.svg" alt="" width="16" height="16"></button>
+      <p class="pager-text"><b id="pgNum" style="font-weight:500">1</b> <span>of <span id="pgTotal">25</span></span> </p>
+      <button class="pager-btn next" id="pgNext" aria-label="Next"><img src="assets/chevron-right-16.svg" alt="" width="16" height="16"></button>
+    </div>
+
+    <!-- Footer -->
+    <div class="m-foot">
+      <div class="progress">
+        <div class="progress-head"><b>Your list</b><span>aim for <span id="target">25</span>+</span></div>
+        <div class="bar"><div class="bar-fill" id="barFill"></div></div>
+        <p class="progress-note" id="progressNote">0 on your list ≈ 0 likely to accept</p>
+      </div>
+      <button class="next-btn s1-only" id="nextBtn"><span>Next: new suggestions (<span id="sgCount">25</span>)</span> <img src="assets/arrow-right-16.svg" alt="" width="16" height="16"></button>
+      <button class="back-btn s2-only" id="backBtn">Back</button>
+      <button class="next-btn s2-only" id="inviteBtn"><span>Invite (<span id="inviteCount">8</span>)</span></button>
+    </div>
+  </div>
+
+  <script src="mock-api.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
