@@ -200,11 +200,58 @@ function renderList(el, list) {
       </div>`).join('');
 }
 
+// ---------- Right panel: show who just arrived ----------
+// The panel is re-rendered on every change, so compare against the last render to
+// find creators who were just added (or just moved between Priority and Others).
+// After the current burst of changes settles (e.g. "Prioritize all" fires several),
+// scroll the first arrival into view and slide + tint every arrival so it's easy to spot.
+let placed = null;                 // id -> 'prio' | 'rest' from the previous render
+const arrivals = new Set();
+let arrivalsQueued = false;
+
+function noteArrivals(prio, rest) {
+  const now = new Map([...prio.map(c => [c.id, 'prio']), ...rest.map(c => [c.id, 'rest'])]);
+  if (placed) now.forEach((g, id) => { if (placed.get(id) !== g) arrivals.add(id); });
+  arrivals.forEach(id => { if (!now.has(id)) arrivals.delete(id); });
+  placed = now;
+  if (arrivals.size && !arrivalsQueued) { arrivalsQueued = true; queueMicrotask(showArrivals); }
+}
+
+function showArrivals() {
+  arrivalsQueued = false;
+  const lists = document.querySelector('.lists');
+  const items = [...arrivals].map(id => lists.querySelector(`.item[data-id="${id}"]`)).filter(Boolean);
+  arrivals.clear();
+  if (!items.length) return;
+  items.sort((a, b) => a.offsetTop - b.offsetTop);
+
+  // Bring the first arrival into view (only if it's out of sight), leaving a little room above
+  const first = items[0], pad = 40;
+  const top = first.offsetTop, bottom = top + first.offsetHeight;
+  if (top < lists.scrollTop + pad || bottom > lists.scrollTop + lists.clientHeight - pad) {
+    const max = lists.scrollHeight - lists.clientHeight;
+    const target = Math.min(max, Math.max(0, top - lists.clientHeight / 2 + first.offsetHeight / 2));
+    const delta = target - lists.scrollTop;
+    lists.scrollTop = target;   // jump, then glide the content from where it was (FLIP)
+    if (!reduceMotion && delta) [...lists.children].forEach(g => g.animate(
+      [{ transform: `translateY(${delta}px)` }, { transform: 'none' }],
+      { duration: 420, easing: 'cubic-bezier(.22, 1, .36, 1)' }));
+  }
+
+  items.forEach((el, i) => {
+    if (!reduceMotion) el.animate(
+      [{ opacity: 0, transform: 'translateX(14px)' }, { opacity: 1, transform: 'none' }],
+      { duration: 320, delay: i * 40, easing: 'cubic-bezier(.22, 1, .36, 1)', fill: 'backwards' });
+    el.classList.remove('arrived'); void el.offsetWidth; el.classList.add('arrived');
+  });
+}
+
 function renderShortlist() {
   const list = api.shortlist();
   const prio = list.filter(c => c.priority), rest = list.filter(c => !c.priority);
   renderList($('priorityList'), prio);
   renderList($('everyoneList'), rest);
+  noteArrivals(prio, rest);
   // Empty shortlist gets the Figma empty state; otherwise only groups with people show
   $('slEmpty').hidden = list.length > 0;
   document.querySelector('.lists').hidden = list.length === 0;

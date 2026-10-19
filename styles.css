@@ -526,3 +526,20 @@ b.stat-row { height: 15.594px; }
     0 48px 110px 16px rgba(0,0,0,0.22);
 }
 #knownCount { position: static; }
+
+/* ===== Right panel: highlight creators who just arrived ===== */
+/* 8px of side room inside the scroll clip so the tint can reach past the row edges */
+.lists { left: 12.45px; right: 11.55px; padding-left: 8px; padding-right: 8px; }
+.item { position: relative; }
+.item > * { position: relative; z-index: 1; }
+.item.arrived::before {
+  content: ''; position: absolute; inset: 2px -8px; border-radius: 10px;
+  background: #f3f0ff; box-shadow: inset 0 0 0 1px #e4dcff;
+  animation: arrived 1.8s cubic-bezier(.4, 0, .2, 1) forwards;
+}
+@keyframes arrived {
+  0%   { opacity: 0; }
+  12%  { opacity: 1; }
+  60%  { opacity: 1; }
+  100% { opacity: 0; }
+}
