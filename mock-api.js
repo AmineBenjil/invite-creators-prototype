@@ -7,16 +7,16 @@ const mockApi = (() => {
   const TARGET = 25;       // "aim for 25+"
   const ACCEPT_RATE = 0.4; // banner: roughly 40% of invited creators accept
 
-  // ---------- Step 1: creators the brand already knows ----------
+  // ---------- Creators the brand already knows (pre-added: "We added for you") ----------
   const known = [
-    { id: 'emma',   name: 'Emma Wilson',   avatar: 'avatar-1', sub: '3 campaigns',                     tag: 'fav',    shortlisted: false, priority: false },
-    { id: 'maya',   name: 'Maya Brooks',   avatar: 'avatar-5', sub: '2 campaigns',                     tag: 'fav',    shortlisted: false, priority: false },
-    { id: 'chloe',  name: 'Chloe Martin',  avatar: 'avatar-9', sub: '2 campaigns',                     tag: 'fav',    shortlisted: false, priority: false },
-    { id: 'zoe',    name: 'Zoe Parker',    avatar: 'avatar-8', sub: '1 campaigns',                     tag: 'fav',    shortlisted: false, priority: false },
-    { id: 'sofia',  name: 'Sofia Patel',   avatar: 'avatar-2', sub: '2 campaigns',                     tag: 'again',  shortlisted: false, priority: false },
-    { id: 'nora',   name: 'Nora Bennett',  avatar: 'avatar-3', sub: '2 campaigns',                     tag: 'again',  shortlisted: false, priority: false },
-    { id: 'olivia', name: 'Olivia Chen',   avatar: 'avatar-4', sub: 'Campaign filled before her turn', tag: 'missed', shortlisted: false, priority: false },
-    { id: 'isabel', name: 'Isabel Rivera', avatar: 'avatar-6', sub: 'Campaign filled before her turn', tag: 'missed', shortlisted: false, priority: false },
+    { id: 'emma',   name: 'Emma Wilson',   avatar: 'avatar-1', sub: '3 campaigns',                     tag: 'fav',    shortlisted: true, priority: true },
+    { id: 'maya',   name: 'Maya Brooks',   avatar: 'avatar-5', sub: '2 campaigns',                     tag: 'fav',    shortlisted: true, priority: true },
+    { id: 'chloe',  name: 'Chloe Martin',  avatar: 'avatar-9', sub: '2 campaigns',                     tag: 'fav',    shortlisted: true, priority: true },
+    { id: 'zoe',    name: 'Zoe Parker',    avatar: 'avatar-8', sub: '1 campaigns',                     tag: 'fav',    shortlisted: true, priority: true },
+    { id: 'sofia',  name: 'Sofia Patel',   avatar: 'avatar-2', sub: '2 campaigns',                     tag: 'again',  shortlisted: true, priority: true },
+    { id: 'nora',   name: 'Nora Bennett',  avatar: 'avatar-3', sub: '2 campaigns',                     tag: 'again',  shortlisted: true, priority: true },
+    { id: 'olivia', name: 'Olivia Chen',   avatar: 'avatar-4', sub: 'Campaign filled before her turn', tag: 'missed', shortlisted: true, priority: true },
+    { id: 'isabel', name: 'Isabel Rivera', avatar: 'avatar-6', sub: 'Campaign filled before her turn', tag: 'missed', shortlisted: true, priority: true },
   ].map(c => ({ ...c, source: 'known', handle: c.name.replace(' ', '_') }));
 
   // ---------- Step 2: new suggestions ----------
@@ -74,8 +74,8 @@ const mockApi = (() => {
   const all = [...known, ...suggestions];
   const byId = id => all.find(c => c.id === id);
   const listeners = new Set();
-  let order = 0; // keeps right-panel lists in the order people were added
-  all.forEach(c => { if (c.shortlisted) c.addedAt = order++; });
+  let order = 0; // when someone last joined their right-panel group (newest shows first)
+  all.forEach((c, i) => { if (c.shortlisted) c.addedAt = -1 - i; });   // seed keeps its listed order; anything added later goes above it
 
   const clone = c => ({ ...c });
   const reply = (data, label) => new Promise(resolve => setTimeout(() => {
@@ -99,7 +99,8 @@ const mockApi = (() => {
 
   function setPriority(id, on) {
     const c = byId(id);
-    if (on && !c.shortlisted) { c.shortlisted = true; c.addedAt = order++; }
+    if (on && !c.shortlisted) c.shortlisted = true;
+    if (c.shortlisted) c.addedAt = order++;   // moving between Priority and normal puts them on top
     c.priority = on;
     changed();
     return reply(clone(c), `priority ${on ? 'on' : 'off'} ${c.name}`);
@@ -117,7 +118,7 @@ const mockApi = (() => {
     known: () => known.map(clone),
     suggestions: () => suggestions.map(clone),
     get: id => clone(byId(id)),
-    shortlist: () => all.filter(c => c.shortlisted).sort((a, b) => a.addedAt - b.addedAt).map(clone),
+    shortlist: () => all.filter(c => c.shortlisted).sort((a, b) => b.addedAt - a.addedAt).map(clone),   // newest first
     setShortlisted, setPriority, dismiss,
     onChange: fn => listeners.add(fn),
   };

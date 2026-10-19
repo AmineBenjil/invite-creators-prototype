@@ -1,5 +1,9 @@
 const api = mockApi;
 const $ = id => document.getElementById(id);
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const EASE_OUT = 'cubic-bezier(.22, 1, .36, 1)';    // settles softly
+const EASE_IN_OUT = 'cubic-bezier(.65, 0, .35, 1)';
+const THROW = 'cubic-bezier(.25, .2, .7, .55)';     // moves on the first frame, then accelerates away
 
 const TAGS = {
   fav:    { label: 'Favorite',         icon: 'tag-favorite.svg' },
@@ -13,385 +17,253 @@ const avatar = (img, border2 = false, size = '') => `
     <img src="assets/${img}.jpg" alt="">
   </div></div>`;
 
-const person = (c, sub, border2, size = '') => `
+const person = c => `
   <div class="person">
-    ${avatar(c.avatar, border2, size)}
+    ${avatar(c.avatar, false, 'sm')}
     <div class="p-info">
       <div class="p-name"><b>${c.name}</b><img src="assets/verified.svg" alt=""></div>
-      <p class="p-sub">${sub}</p>
+      <p class="p-sub">${c.handle}</p>
     </div>
   </div>`;
 
 const emo = text => text.replace(/(\p{Extended_Pictographic})/gu, '<i class="emo">$1</i>');
 
-// Creator profile: used by the step-2 card and the step-1 hover card
-const profileHTML = (c, isNew) => `
-    <div class="sg-head">
-      <div class="sg-who">
-        ${avatar(c.avatar, true, 'lg')}
-        <div class="sg-info">
-          <div class="sg-name">
-            <span class="sg-n"><b>${c.name}</b><img src="assets/verified-16.svg" alt="" width="16" height="16"></span>
-            <span class="sg-handle">@${c.handle}</span>
-            ${isNew ? '<span class="sg-new">New</span>' : ''}
-          </div>
-          <p class="sg-bio">${emo(c.bio)}</p>
+// Creator card body. Suggestions get the "New" pill; creators you know get their "For you" tag.
+const profileHTML = c => `
+  <div class="cc-head">
+    <div class="cc-who">
+      ${avatar(c.avatar, true, 'md')}
+      <div class="cc-info">
+        <div class="cc-name">
+          <span class="cc-n"><b>${c.name}</b><img src="assets/verified-16.svg" alt="" width="16" height="16"></span>
+          <span class="cc-handle">@${c.handle}</span>
+          ${c.source === 'known'
+            ? `<span class="cc-tag ${c.tag}"><img src="assets/${TAGS[c.tag].icon}" alt="">${TAGS[c.tag].label}</span>`
+            : '<span class="cc-new">New</span>'}
         </div>
-      </div>
-      <div class="sg-social">
-        <a><img src="assets/instagram-24.svg" alt="Instagram" width="24" height="24"></a>
-        <a><img src="assets/tiktok-24.svg" alt="TikTok" width="24" height="24"></a>
+        <p class="cc-bio">${emo(c.bio)}</p>
       </div>
     </div>
-
-    <div class="sg-fit">
-      <div class="sg-fit-title"><img src="assets/sparkle-fit.svg" alt="" width="16" height="16">Why they fit</div>
-      <div class="sg-fit-list">
-        ${c.fit.map(f => `<p><img src="assets/bullet-check.svg" alt="" width="16" height="16">${f}</p>`).join('')}
-      </div>
+    <div class="cc-social">
+      <a><img src="assets/instagram-24.svg" alt="Instagram" width="24" height="24"></a>
+      <a><img src="assets/tiktok-24.svg" alt="TikTok" width="24" height="24"></a>
     </div>
+  </div>
 
-    <div class="sg-stats">
-      <div class="sg-col" style="width:278px">
-        <p class="sg-label">Social Stats</p>
-        <div class="sg-box" style="height:53.789px">
-          <div class="stat" style="left:15.5px"><span>Followers</span><b>${c.followers}</b></div>
-          <div class="stat" style="left:153px">
-            <span class="stat-row">Engagement<img src="assets/info-12.svg" alt="" width="12" height="12"></span>
-            <b class="stat-row"><span class="ig12"><img src="assets/instagram-12.svg" alt=""></span>${c.engagement}</b>
-          </div>
-        </div>
-      </div>
-      <div class="sg-col">
-        <p class="sg-label">Audience</p>
-        <div class="sg-box" style="width:382px;height:53px">
-          <div class="stat" style="left:15.5px"><span>Location</span><b>${c.location}</b></div>
-          <div class="stat cx" style="left:calc(50% - 15px)"><span>Age Range</span><b>${c.age}</b></div>
-          <div class="stat cx" style="left:calc(50% + 139px)"><span>Gender</span><b>${c.gender}</b></div>
+  <div class="cc-fit">
+    <div class="cc-fit-title"><img src="assets/sparkle-fit.svg" alt="" width="16" height="16">Why they fit</div>
+    <div class="cc-fit-list">
+      ${c.fit.map(f => `<p><img src="assets/bullet-check.svg" alt="" width="16" height="16">${f}</p>`).join('')}
+    </div>
+  </div>
+
+  <div class="cc-stats">
+    <div class="cc-col grow">
+      <p class="cc-label">Social Stats</p>
+      <div class="cc-box">
+        <div class="stat" style="left:15.5px"><span>Followers</span><b>${c.followers}</b></div>
+        <div class="stat" style="left:105px">
+          <span class="stat-row">Engagement<img src="assets/info-12.svg" alt="" width="12" height="12"></span>
+          <b class="stat-row"><span class="ig12"><img src="assets/instagram-12.svg" alt=""></span>${c.engagement}</b>
         </div>
       </div>
     </div>
-
-    <div class="sg-content">
-      <p class="sg-label">Recent content</p>
-      <div class="tiles">${c.content.map(img => `<div class="tile"><img src="assets/${img}.jpg" alt=""></div>`).join('')}</div>
-    </div>`;
-
-// ---------- Step 1: creators you know ----------
-const rows = $('rows');
-function renderRows() {
-  $('prioritizeAll').disabled = api.known().every(c => c.priority);
-  $('knownCount').textContent = api.known().length;
-  rows.innerHTML = api.known().filter(c => !tagFilter || c.tag === tagFilter).map(c => `
-    <div class="row" data-id="${c.id}">
-      ${person(c, c.sub)}
-      <div class="tag ${c.tag}"><img src="assets/${TAGS[c.tag].icon}" alt="">${TAGS[c.tag].label}</div>
-      <div class="split${c.shortlisted ? ' added' : ''}${c.priority ? ' prio' : ''}">
-        <button class="split-add" aria-pressed="${c.shortlisted}">
-          <img src="assets/${c.shortlisted ? 'check-12' : 'plus-12'}.svg" alt="" width="12" height="12">${c.shortlisted ? 'Added' : 'Add'}
-        </button>
-        <button class="split-star" aria-pressed="${c.priority}" aria-label="Priority invite"><img src="assets/star-16-${c.priority ? 'on' : 'off'}.svg" alt="" width="16" height="16"></button>
+    <div class="cc-col" style="width:343px">
+      <p class="cc-label">Audience</p>
+      <div class="cc-box">
+        <div class="stat" style="left:19.5px"><span>Location</span><b>${c.location}</b></div>
+        <div class="stat cx" style="left:calc(50% - 7.5px)"><span>Age Range</span><b>${c.age}</b></div>
+        <div class="stat cx" style="left:calc(50% + 105.5px); top:calc(50% - 0.5px)"><span>Gender</span><b>${c.gender}</b></div>
       </div>
-    </div>`).join('');
+    </div>
+  </div>
+
+  <div class="cc-content">
+    <p class="cc-label">Recent content</p>
+    <div class="tiles">${c.content.map(img => `<div class="tile"><img src="assets/${img}.jpg" alt=""></div>`).join('')}</div>
+  </div>`;
+
+// ---------- Card decks ----------
+// One engine drives both decks: the suggestions, and the "creators you know" deck that
+// opens from the collapsed bar. Each deck owns a card element, a list and a position.
+//  'next' : the top card is thrown off to the left (accelerating, arcing from a low pivot)
+//           while the next card dissolves up in its place.
+//  'prev' : the current card dissolves back while the previous one glides back in on top.
+// Moving copies live in the card's own container, so they disappear at its edge.
+// Clicks mid-swipe fast-forward the swipe; rapid clicks queue.
+const DECK = 'translateY(6px) scale(.96)';   // a card waiting just behind the top one
+const OFFSCREEN = 'translate(-1000px, 80px) rotate(-18deg)';
+const INTO_PANEL = 'translate(520px, -30px) scale(.22)';   // card centre → middle of the shortlist panel
+
+// Cards use the 16px plus (Figma 15204 / 15212); Added shows the 12px check
+function setAddIcon(split, added) {
+  const img = split.querySelector('.i-add');
+  const big = !added;
+  img.src = `assets/${added ? 'check-12' : big ? 'plus-16' : 'plus-12'}.svg`;
+  img.width = img.height = big ? 16 : 12;
 }
 
-// ---------- "For you" filter ----------
-let tagFilter = null;   // null = everyone, otherwise a TAGS key
-const filterBtn = $('filterBtn'), filterPop = $('filterPop');
+function makeDeck({ card, body, list, pager }) {
+  const deck = { card, body, list, pager, index: 0, running: null, queue: Promise.resolve(), pending: null };
 
-function renderFilterPop() {
-  const opt = (key, label, icon) => `
-    <button class="fp-opt${tagFilter === key ? ' on' : ''}" role="menuitemradio" aria-checked="${tagFilter === key}" data-key="${key ?? ''}">
-      ${icon ? `<img class="fp-icon" src="assets/${icon}" alt="" width="12" height="12">` : '<span class="fp-icon"></span>'}
-      <span class="fp-label">${label}</span>
-      <img class="fp-check" src="assets/check-12.svg" alt="" width="12" height="12">
-    </button>`;
-  filterPop.innerHTML = `<p class="fp-title">Show creators</p>`
-    + opt(null, 'All', null)
-    + Object.entries(TAGS).map(([k, t]) => opt(k, t.label, t.icon)).join('');
-}
+  deck.current = () => deck.list()[deck.index];
 
-function setFilterOpen(open) {
-  if (open) {
-    renderFilterPop();
-    // drop the popover under the button, inside the card
-    const b = filterBtn.getBoundingClientRect(), c = document.querySelector('.card').getBoundingClientRect();
-    filterPop.style.left = (b.left - c.left - 6) + 'px';
-    filterPop.style.top = (b.bottom - c.top + 6) + 'px';
-  }
-  filterPop.hidden = !open;
-  filterBtn.classList.toggle('open', open);
-  filterBtn.setAttribute('aria-expanded', open);
-}
-
-filterBtn.addEventListener('click', e => { e.stopPropagation(); setFilterOpen(filterPop.hidden); });
-filterPop.addEventListener('click', e => {
-  const o = e.target.closest('.fp-opt');
-  if (!o) return;
-  tagFilter = o.dataset.key || null;
-  filterBtn.classList.toggle('active', !!tagFilter);
-  setFilterOpen(false);
-  renderRows();
-});
-document.addEventListener('click', e => { if (!filterPop.hidden && !filterPop.contains(e.target)) setFilterOpen(false); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && !filterPop.hidden) setFilterOpen(false); });
-
-// "Prioritize all": stars every creator in the table (which also adds them)
-$('prioritizeAll').addEventListener('click', () => {
-  api.known().filter(c => !c.priority).forEach(c => api.setPriority(c.id, true));
-});
-
-rows.addEventListener('click', e => {
-  const row = e.target.closest('.row');
-  if (!row) return;
-  const c = api.get(row.dataset.id);
-  if (e.target.closest('.split-add')) api.setShortlisted(c.id, !c.shortlisted);
-  if (e.target.closest('.split-star')) api.setPriority(c.id, !c.priority);
-});
-
-// Hover a name in the table to preview that creator's profile card
-const hovercard = document.createElement('div');
-hovercard.className = 'hovercard';
-document.body.appendChild(hovercard);
-let hoverTimer, hideTimer, hoverId;
-
-function showHovercard(nameEl, id) {
-  const c = api.get(id);
-  if (hoverId !== id) hovercard.innerHTML = profileHTML(c, false);
-  hoverId = id;
-  const r = nameEl.getBoundingClientRect();
-  const W = 724, H = 440, GAP = 8, M = 12;
-  const left = Math.min(Math.max(M, r.left - 24), innerWidth - W - M);
-  const below = r.bottom + GAP + H <= innerHeight - M;
-  const top = below ? r.bottom + GAP : Math.max(M, r.top - GAP - H);
-  hovercard.style.left = left + 'px';
-  hovercard.style.top = top + 'px';
-  hovercard.dataset.side = below ? 'below' : 'above';
-  hovercard.classList.add('open');
-}
-const hideHovercard = () => { hovercard.classList.remove('open'); };
-
-rows.addEventListener('mouseover', e => {
-  const nameEl = e.target.closest('.p-name b');
-  if (!nameEl) return;
-  clearTimeout(hideTimer);
-  clearTimeout(hoverTimer);
-  const id = nameEl.closest('.row').dataset.id;
-  hoverTimer = setTimeout(() => showHovercard(nameEl, id), hovercard.classList.contains('open') ? 0 : 250);
-});
-rows.addEventListener('mouseout', e => {
-  if (!e.target.closest('.p-name b')) return;
-  clearTimeout(hoverTimer);
-  hideTimer = setTimeout(hideHovercard, 150);
-});
-// Moving the pointer onto the card keeps it open, so links and content can be looked at
-hovercard.addEventListener('mouseenter', () => clearTimeout(hideTimer));
-hovercard.addEventListener('mouseleave', () => { hideTimer = setTimeout(hideHovercard, 150); });
-
-// ---------- Right panel: the shortlist ----------
-function renderList(el, list) {
-  el.innerHTML = list.map(c => `
-      <div class="item" data-id="${c.id}">
-        ${person(c, c.handle, false, 'sm')}
-        <div class="item-actions">
-          ${c.priority ? '<button class="item-star" aria-label="Remove priority for ' + c.name + '"><img src="assets/star-16-panel.svg" alt="" width="16" height="16"></button>' : ''}
-          <button class="item-x" aria-label="Remove ${c.name}"><img src="assets/close-12.svg" alt=""></button>
-        </div>
-      </div>`).join('');
-}
-
-// ---------- Right panel: show who just arrived ----------
-// The panel is re-rendered on every change, so compare against the last render to
-// find creators who were just added (or just moved between Priority and Others).
-// After the current burst of changes settles (e.g. "Prioritize all" fires several),
-// scroll the first arrival into view and slide + tint every arrival so it's easy to spot.
-let placed = null;                 // id -> 'prio' | 'rest' from the previous render
-const arrivals = new Set();
-let arrivalsQueued = false;
-
-function noteArrivals(prio, rest) {
-  const now = new Map([...prio.map(c => [c.id, 'prio']), ...rest.map(c => [c.id, 'rest'])]);
-  if (placed) now.forEach((g, id) => { if (placed.get(id) !== g) arrivals.add(id); });
-  arrivals.forEach(id => { if (!now.has(id)) arrivals.delete(id); });
-  placed = now;
-  if (arrivals.size && !arrivalsQueued) { arrivalsQueued = true; queueMicrotask(showArrivals); }
-}
-
-function showArrivals() {
-  arrivalsQueued = false;
-  const lists = document.querySelector('.lists');
-  const items = [...arrivals].map(id => lists.querySelector(`.item[data-id="${id}"]`)).filter(Boolean);
-  arrivals.clear();
-  if (!items.length) return;
-  items.sort((a, b) => a.offsetTop - b.offsetTop);
-
-  // Bring the first arrival into view (only if it's out of sight), leaving a little room above
-  const first = items[0], pad = 40;
-  const top = first.offsetTop, bottom = top + first.offsetHeight;
-  if (top < lists.scrollTop + pad || bottom > lists.scrollTop + lists.clientHeight - pad) {
-    const max = lists.scrollHeight - lists.clientHeight;
-    const target = Math.min(max, Math.max(0, top - lists.clientHeight / 2 + first.offsetHeight / 2));
-    const delta = target - lists.scrollTop;
-    lists.scrollTop = target;   // jump, then glide the content from where it was (FLIP)
-    if (!reduceMotion && delta) [...lists.children].forEach(g => g.animate(
-      [{ transform: `translateY(${delta}px)` }, { transform: 'none' }],
-      { duration: 420, easing: 'cubic-bezier(.22, 1, .36, 1)' }));
-  }
-
-  items.forEach((el, i) => {
-    if (!reduceMotion) el.animate(
-      [{ opacity: 0, transform: 'translateX(14px)' }, { opacity: 1, transform: 'none' }],
-      { duration: 320, delay: i * 40, easing: 'cubic-bezier(.22, 1, .36, 1)', fill: 'backwards' });
-    el.classList.remove('arrived'); void el.offsetWidth; el.classList.add('arrived');
-  });
-}
-
-function renderShortlist() {
-  const list = api.shortlist();
-  const prio = list.filter(c => c.priority), rest = list.filter(c => !c.priority);
-  renderList($('priorityList'), prio);
-  renderList($('everyoneList'), rest);
-  noteArrivals(prio, rest);
-  // Empty shortlist gets the Figma empty state; otherwise only groups with people show
-  $('slEmpty').hidden = list.length > 0;
-  document.querySelector('.lists').hidden = list.length === 0;
-  $('priorityList').closest('.group').hidden = prio.length === 0;
-  $('everyoneList').closest('.group').hidden = rest.length === 0;
-  // With nobody prioritized there is nothing to contrast with, so the one group is just "Shortlisted"
-  $('othersTitle').textContent = prio.length ? 'Others' : 'Shortlisted';
-
-  // "Your list" meter: fills toward the target, and estimates acceptances
-  // using the ~40% rate quoted in the banner.
-  const n = list.length;
-  $('inviteCount').textContent = n;
-  $('target').textContent = api.TARGET;
-  $('barFill').style.width = Math.min(100, n / api.TARGET * 100) + '%';
-  $('progressNote').textContent = `${n} on your list ≈ ${Math.round(n * api.ACCEPT_RATE)} likely to accept`;
-  $('sgCount').textContent = api.suggestions().filter(c => !c.dismissed).length;
-}
-
-document.querySelector('.right').addEventListener('click', e => {
-  const item = e.target.closest('.item');
-  if (!item) return;
-  if (e.target.closest('.item-x')) api.setShortlisted(item.dataset.id, false);
-  if (e.target.closest('.item-star')) api.setPriority(item.dataset.id, false);
-});
-
-// ---------- Step 2: new suggestions ----------
-let current = 0; // index into the suggestions still in play
-const inPlay = () => api.suggestions().filter(c => !c.dismissed);
-
-function renderSuggestion() {
-  const list = inPlay();
-  current = Math.max(0, Math.min(current, list.length - 1));
-  const c = list[current];
-  const body = $('sgBody');
-  if (!c) { body.innerHTML = '<p class="sg-done">You’ve gone through every suggestion.</p>'; return; }
-
-  body.innerHTML = profileHTML(c, true);
-
-  // Same split Add / star pill as step 1, at the card's larger size
-  $('sgSplit').classList.toggle('added', c.shortlisted);
-  $('sgSplit').classList.toggle('prio', c.priority);
-  $('sgAddIcon').src = `assets/${c.shortlisted ? 'check-12' : 'plus-12'}.svg`;
-  $('sgAddLabel').textContent = c.shortlisted ? 'Added' : 'Add';
-  $('sgStarIcon').src = `assets/${c.priority ? 'star-16-on' : 'star-20-off'}.svg`;
-  $('pgNum').textContent = current + 1;
-  $('pgTotal').textContent = list.length;
-  $('pgPrev').disabled = current === 0;
-  $('pgNext').disabled = current >= list.length - 1;
-}
-
-const currentId = () => inPlay()[current]?.id;
-// ---------- Card deck animation ----------
-// Two moves, built only from transform + opacity so they stay on the compositor:
-//  'next' : the top card is thrown off to the left (accelerating, arcing from a
-//           low pivot) while the next card dissolves up out of the deck in its place.
-//  'prev' : the current card dissolves back into the deck while the previous card
-//           glides back in from the left and settles (decelerating).
-// The moving copy lives inside the modal, so it slides out of sight at the
-// pop-up's edge. Clicking mid-swipe fast-forwards the current swipe.
-const card = document.querySelector('.suggest');
-const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const EASE_OUT = 'cubic-bezier(.22, 1, .36, 1)';   // settles softly
-const THROW = 'cubic-bezier(.25, .2, .7, .55)';     // moves on the first frame, then accelerates away
-const DECK = 'translateY(8px) scale(.965)';        // where a card sits in the deck
-const OFFSCREEN = 'translate(-1000px, 80px) rotate(-18deg)'; // fully past the modal's left edge
-let running = null;                                 // { anims, cleanup } of the swipe in flight
-
-function flyingCopy(from) {
-  // Same absolute slot as the real card, inside the modal, so the modal's
-  // rounded edge clips it: the card disappears behind the pop-up's border.
-  const el = from.cloneNode(true);
-  el.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'));
-  el.removeAttribute('id');
-  el.classList.add('ghost');
-  el.style.zIndex = 2;
-  from.after(el);
-  return el;
-}
-
-function finishRunning() {
-  if (!running) return;
-  running.anims.forEach(a => a.finish());
-  running.cleanup();
-}
-
-function swap(direction, change) {
-  finishRunning();
-  card.classList.add('no-tx');          // the footer pill must not tween between cards
-  const old = flyingCopy(card);         // frozen picture of the card being replaced
-  change();                             // real card now shows the new creator
-
-  let anims;
-  if (reduceMotion) {
-    anims = [
-      old.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, fill: 'forwards' }),
-      card.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160 }),
-    ];
-  } else if (direction === 'next') {
-    // The thrown card stays solid and slides out past the modal's left edge,
-    // so no frame ever shows two cards' text through each other.
-    old.style.transformOrigin = '50% 140%';
-    anims = [
-      old.animate([{ transform: 'none' }, { transform: OFFSCREEN }],
-        { duration: 420, easing: THROW, fill: 'forwards' }),
-      card.animate([{ transform: DECK, opacity: 0 }, { transform: 'none', opacity: 1 }],
-        { duration: 420, delay: 60, easing: EASE_OUT, fill: 'backwards' }),
-    ];
-  } else {
-    // The previous card slides back in solid from off-screen and lands on top,
-    // while the current one dissolves back into the deck underneath it.
-    const incoming = flyingCopy(card);   // inserted right after the card, so it sits above `old`
-    old.style.zIndex = 1;
-    card.style.opacity = 0;
-    incoming.style.transformOrigin = '50% 140%';
-    anims = [
-      old.animate([{ transform: 'none' }, { transform: DECK }],
-        { duration: 320, easing: EASE_OUT, fill: 'forwards' }),
-      old.animate([{ opacity: 1 }, { opacity: 0 }],
-        { duration: 220, easing: 'linear', fill: 'forwards' }),
-      incoming.animate([{ transform: OFFSCREEN }, { transform: 'none' }],
-        { duration: 540, easing: EASE_OUT, fill: 'forwards' }),
-    ];
-    // hand off to the real card on the exact frame the copy lands
-    anims[2].finished.then(() => { card.style.opacity = ''; incoming.remove(); }, () => {});
-    old.extra = incoming;
-  }
-
-  const me = {
-    anims,
-    cleanup() {
-      if (running !== me) return;
-      running = null;
-      card.style.opacity = '';
-      old.extra?.remove();
-      old.remove();
-      card.classList.remove('no-tx');
-    },
+  // Re-render after a data change, staying on the same creator if they're still in the deck
+  // (e.g. someone removed from the shortlist returns to the deck without moving you)
+  deck.refresh = () => {
+    const i = deck.list().findIndex(x => x.id === deck.curId);
+    if (i >= 0) deck.index = i;
+    deck.render();
   };
-  running = me;
-  Promise.all(anims.map(a => a.finished)).then(me.cleanup, me.cleanup);
+
+  deck.render = () => {
+    const l = deck.list();
+    deck.index = Math.max(0, Math.min(deck.index, l.length - 1));
+    const c = l[deck.index];
+    deck.curId = c?.id;
+    if (!c) { body.innerHTML = '<p class="sg-done">You’ve gone through every creator.</p>'; return; }
+    body.innerHTML = profileHTML(c);
+    const split = card.querySelector('.split');
+    split.classList.toggle('added', c.shortlisted);
+    split.classList.toggle('prio', c.priority);
+    setAddIcon(split, c.shortlisted);
+    split.querySelector('.l-add').textContent = c.shortlisted ? 'Added' : 'Add';
+    // Tooltips say what a click will do
+    split.querySelector('.split-add').dataset.tip = c.shortlisted ? 'Remove from your shortlist' : 'Add creator to your shortlist';
+    split.querySelector('.split-star').dataset.tip = c.priority ? 'Remove priority invite' : 'Priority invite';
+    renderPager(deck);
+  };
+
+  const flyingCopy = () => {
+    const el = card.cloneNode(true);
+    el.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'));
+    el.removeAttribute('id');
+    el.classList.add('ghost');
+    el.style.zIndex = 2;
+    card.after(el);
+    return el;
+  };
+
+  const finishRunning = () => {
+    if (!deck.running) return;
+    deck.running.anims.forEach(a => a.finish());
+    deck.running.cleanup();
+  };
+
+  deck.swap = (direction, change) => {
+    finishRunning();
+    card.classList.add('no-tx');
+    const old = flyingCopy();
+    change();
+    let anims, incoming;
+    if (reduceMotion) {
+      anims = [
+        old.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, fill: 'forwards' }),
+        card.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160 }),
+      ];
+    } else if (direction === 'add') {
+      // Added: the card shrinks away to the right, into the shortlist panel, while the
+      // next card dissolves up in its place
+      old.style.transformOrigin = '50% 50%';
+      anims = [
+        old.animate([{ transform: 'none' }, { transform: INTO_PANEL }], { duration: 560, easing: 'cubic-bezier(.55, 0, .25, 1)', fill: 'forwards' }),
+        old.animate([{ opacity: 1 }, { opacity: 1, offset: .5 }, { opacity: 0 }], { duration: 560, easing: 'linear', fill: 'forwards' }),
+        card.animate([{ transform: DECK, opacity: 0 }, { transform: 'none', opacity: 1 }],
+          { duration: 440, delay: 220, easing: EASE_OUT, fill: 'backwards' }),
+      ];
+    } else if (direction === 'next') {
+      old.style.transformOrigin = '50% 140%';
+      anims = [
+        old.animate([{ transform: 'none' }, { transform: OFFSCREEN }], { duration: 420, easing: THROW, fill: 'forwards' }),
+        card.animate([{ transform: DECK, opacity: 0 }, { transform: 'none', opacity: 1 }],
+          { duration: 420, delay: 60, easing: EASE_OUT, fill: 'backwards' }),
+      ];
+    } else {
+      incoming = flyingCopy();          // sits right after the card, above `old`
+      old.style.zIndex = 1;
+      card.style.opacity = 0;
+      incoming.style.transformOrigin = '50% 140%';
+      anims = [
+        old.animate([{ transform: 'none' }, { transform: DECK }], { duration: 320, easing: EASE_OUT, fill: 'forwards' }),
+        old.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 220, easing: 'linear', fill: 'forwards' }),
+        incoming.animate([{ transform: OFFSCREEN }, { transform: 'none' }], { duration: 540, easing: EASE_OUT, fill: 'forwards' }),
+      ];
+      anims[2].finished.then(() => { card.style.opacity = ''; incoming.remove(); }, () => {});
+    }
+    const me = {
+      anims,
+      cleanup() {
+        if (deck.running !== me) return;
+        deck.running = null;
+        card.style.opacity = '';
+        incoming?.remove();
+        old.remove();
+        card.classList.remove('no-tx');
+      },
+    };
+    deck.running = me;
+    Promise.all(anims.map(a => a.finished)).then(me.cleanup, me.cleanup);
+  };
+
+  deck.go = delta => {
+    const target = (deck.pending ?? deck.index) + delta;
+    if (target < 0 || target > deck.list().length - 1) return deck.queue;
+    deck.pending = target;
+    deck.queue = deck.queue.then(async () => {
+      await Promise.race([warm(deck.list()[target]), new Promise(r => setTimeout(r, 120))]);
+      deck.swap(delta > 0 ? 'next' : 'prev', () => { deck.index = target; deck.render(); });
+      if (deck.pending === target) deck.pending = null;
+      warmAround(deck);
+    });
+    return deck.queue;
+  };
+
+  // Add / priority advance to the next card after a beat, so the new state is seen first
+  const advanceSoon = () => { if (deck.index < deck.list().length - 1) setTimeout(() => deck.go(1), 350); };
+
+  // A click hides the tooltip until the pointer leaves the button
+  card.querySelectorAll('.split button').forEach(b => {
+    b.addEventListener('pointerdown', () => b.classList.add('tip-off'));
+    b.addEventListener('pointerleave', () => b.classList.remove('tip-off'));
+  });
+
+  card.querySelector('.dc-foot').addEventListener('click', e => {
+    const btn = e.target.closest('[data-act]');
+    const c = deck.current();
+    if (!btn || !c) return;
+    const act = btn.dataset.act;
+    // Suggestions: Add / ⚡ sends the card into the shortlist panel and it leaves the deck
+    if (c.source === 'suggested' && (act === 'add' || act === 'prio')) {
+      if (deck.sending) return;
+      deck.sending = true;
+      const split = card.querySelector('.split');   // show the new state for a beat first
+      split.classList.add('added');
+      if (act === 'prio') split.classList.add('prio');
+      setAddIcon(split, true);
+      split.querySelector('.l-add').textContent = 'Added';
+      setTimeout(() => {
+        deck.sending = false;
+        deck.swap('add', () => act === 'prio' ? api.setPriority(c.id, true) : api.setShortlisted(c.id, true));
+      }, reduceMotion ? 0 : 200);
+      return;
+    }
+    if (act === 'add') {
+      if (c.shortlisted) return api.setShortlisted(c.id, false);
+      api.setShortlisted(c.id, true); advanceSoon();
+    } else if (act === 'prio') {
+      if (c.priority) return api.setPriority(c.id, false);
+      api.setPriority(c.id, true); advanceSoon();
+    } else if (act === 'skip') {
+      // Suggestions: "Not a Fit" drops them from the deck. Creators you know: it takes them
+      // off the list but keeps their card, so they can be added back.
+      if (c.source === 'suggested') deck.swap('next', () => api.dismiss(c.id));
+      else { api.setShortlisted(c.id, false); advanceSoon(); }
+    }
+  });
+
+  pager.querySelector('.pg-prev').addEventListener('click', () => deck.go(-1));
+  pager.querySelector('.pg-next').addEventListener('click', () => deck.go(1));
+  return deck;
 }
 
 // Decode a creator's photos before their card is dealt, so tiles never pop in mid-dissolve
@@ -402,72 +274,368 @@ function warm(c) {
   const srcs = [c.avatar, ...c.content].map(n => `assets/${n}.jpg`);
   return Promise.all(srcs.map(src => { const i = new Image(); i.src = src; return i.decode().catch(() => {}); }));
 }
-const warmNeighbours = () => { const l = inPlay(); warm(l[current - 1]); warm(l[current + 1]); };
+const warmAround = d => { const l = d.list(); warm(l[d.index - 1]); warm(l[d.index + 1]); };
 
-// Navigation is queued: rapid clicks each advance one card, in order, and each
-// new swipe fast-forwards the one before it instead of being dropped.
-let queue = Promise.resolve();
-let pending = null;   // where the deck will be once queued swipes have run
-const go = delta => {
-  const list = inPlay();
-  const target = (pending ?? current) + delta;
-  if (target < 0 || target > list.length - 1) return queue;
-  pending = target;
-  queue = queue.then(async () => {
-    // wait briefly for the incoming photos (cached after the first time, so usually instant)
-    await Promise.race([warm(inPlay()[target]), new Promise(r => setTimeout(r, 120))]);
-    swap(delta > 0 ? 'next' : 'prev', () => { current = target; renderSuggestion(); });
-    if (pending === target) pending = null;
-    warmNeighbours();
+const suggestDeck = makeDeck({
+  card: $('suggestCard'), body: $('suggestBody'),
+  list: () => api.suggestions().filter(c => !c.dismissed && !c.shortlisted),   // added creators leave the deck
+  pager: $('suggestPager'),
+});
+const knownDeck = makeDeck({
+  card: $('knownCard'), body: $('knownBody'),
+  list: () => api.known(),
+  pager: $('knownPager'),
+});
+
+// ---------- Pagers: each deck has its own, which moves with it ----------
+function renderPager(deck) {
+  const l = deck.list(), p = deck.pager;
+  p.querySelector('.pg-num').textContent = l.length ? deck.index + 1 : 0;
+  p.querySelector('.pg-total').textContent = l.length;
+  p.querySelector('.pg-prev').disabled = deck.index <= 0;
+  p.querySelector('.pg-next').disabled = deck.index >= l.length - 1;
+}
+
+// ---------- Creators you know: collapsed bar ⇄ expanded deck ----------
+const known = $('known');
+const COLLAPSED = 57, EXPANDED_DECK = 635;   // V3's table block is 578 (set in setKnownOpen)   // bar height → bar + card + pager (bottom lines up with the shortlist panel)
+let knownAnims = [];
+
+function stackHTML(people, max, cls) {
+  const shown = people.slice(0, max);
+  const more = people.length - shown.length;
+  return shown.map(c => `<span class="${cls}-av"><img src="assets/${c.avatar}.jpg" alt=""></span>`).join('')
+    + (more > 0 ? `<span class="${cls}-more">+${more}</span>` : '');
+}
+
+function renderKnownBar() {
+  const on = api.known().filter(c => c.shortlisted);
+  $('knCount').textContent = on.length;
+  $('knStack').innerHTML = stackHTML(on, 4, 'kn');
+  $('knSub').textContent = on.length
+    ? 'Creators you loved working with are already on your list'
+    : 'Add creators you’ve worked with before';
+}
+
+function setKnownOpen(open) {
+  if (known.classList.contains('open') === open) return;
+  knownAnims.forEach(a => a.cancel());   // cancel (not finish) so no held fade lingers into the next toggle
+  known.classList.toggle('open', open);
+  $('modal').classList.toggle('editing', open);
+  $('knEdit').setAttribute('aria-expanded', open);
+  $('knEditLabel').textContent = open ? 'Save' : 'Edit';
+  setAddedOpen(open);
+  const table = version === 'v3';
+  const EXPANDED = table ? 578 : EXPANDED_DECK;
+  known.classList.toggle('as-table', table);
+  if (open) table ? renderKnTable() : knownDeck.render();
+
+  // The suggestion card and its pager travel together; so do the known card and its pager
+  const sugg = [suggestDeck.card, suggestDeck.pager];
+  const kn = table ? [$('knTable')] : [knownDeck.card, knownDeck.pager];
+  const all = (els, frames, opts) => els.map(el => el.animate(frames, opts));
+  const h = (a, b) => [{ height: a + 'px' }, { height: b + 'px' }];
+  known.style.height = (open ? EXPANDED : COLLAPSED) + 'px';
+  if (reduceMotion) { sugg.forEach(el => el.style.visibility = open ? 'hidden' : ''); return; }
+
+  if (open) {
+    sugg.forEach(el => el.style.pointerEvents = 'none');
+    const out = all(sugg, [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(48px) scale(.97)' }],
+      { duration: 280, easing: EASE_IN_OUT, fill: 'forwards' });
+    if (table) $('ktRows').querySelectorAll('.pop-row').forEach((r, i) => r.animate(
+      [{ opacity: 0, transform: 'translateY(-6px)' }, { opacity: 1, transform: 'none' }],
+      { duration: 320, delay: 140 + i * 30, easing: EASE_OUT, fill: 'backwards' }));
+    knownAnims = [
+      known.animate(h(COLLAPSED, EXPANDED), { duration: 480, easing: EASE_OUT }),
+      ...all(kn, [{ opacity: 0, transform: 'translateY(-14px)' }, { opacity: 1, transform: 'none' }],
+        { duration: 380, delay: 110, easing: EASE_OUT, fill: 'backwards' }),
+      ...out,
+    ];
+    out[0].finished.then(() => { if (known.classList.contains('open')) sugg.forEach(el => el.style.visibility = 'hidden'); }, () => {});
+  } else {
+    sugg.forEach(el => el.style.visibility = '');
+    // Save: the block rolls up into the bar (fast start, soft landing) and the suggestion
+    // card slides back up into place beneath it, pager and all
+    const roll = known.animate(h(EXPANDED, COLLAPSED), { duration: 420, easing: EASE_OUT });
+    const fade = all(kn, [{ opacity: 1 }, { opacity: 0 }], { duration: 120, fill: 'forwards' });   // stays hidden while the block shrinks
+    const back = all(sugg, [{ opacity: 0, transform: 'translateY(140px)' }, { opacity: 1, transform: 'none' }],
+      { duration: 560, delay: 60, easing: EASE_OUT, fill: 'backwards' });
+    knownAnims = [roll, ...fade, ...back];
+    back[0].finished.then(() => sugg.forEach(el => el.style.pointerEvents = ''), () => {});
+    roll.finished.then(() => fade.forEach(a => a.cancel()), () => {});   // drop the held fade once collapsed
+  }
+}
+
+// V1 / V3 expand the block in place (deck / table); V2 opens the editor popup instead
+const editKnown = () => version === 'v2' ? openPop() : setKnownOpen(!known.classList.contains('open'));
+$('knEdit').addEventListener('click', editKnown);
+$('weAdded').addEventListener('click', () => version === 'v2' ? openPop() : setKnownOpen(true));
+
+// ---------- Right panel: the shortlist ----------
+// ⚡ shows on everyone invited first; tapping it moves them down to a normal invite.
+// Normal invites get a grey ⚡ on hover that makes them a priority invite.
+const BOLT = c => c.priority
+  ? `<button class="item-star" title="Remove from first priority" aria-label="Remove ${c.name} from first priority"><img src="assets/bolt-20-panel.svg" alt=""></button>`
+  : `<button class="item-bolt" title="Priority invite" aria-label="Make ${c.name} a priority invite"><img class="b-off" src="assets/bolt-20-grey.svg" alt=""><img class="b-on" src="assets/bolt-20-panel.svg" alt=""></button>`;
+
+function renderList(el, list) {
+  el.innerHTML = list.map(c => `
+    <div class="item" data-id="${c.id}">
+      ${person(c)}
+      <div class="item-actions">
+        ${BOLT(c)}
+        <button class="item-x" aria-label="Remove ${c.name}"><img src="assets/close-12.svg" alt=""></button>
+      </div>
+    </div>`).join('');
+}
+
+// "We added for you": a summary card normally, the full list while editing. The group
+// eases to its new height and the rows drop in one after another.
+let addedAnim = null;
+function setAddedOpen(open) {
+  const g = $('addedGroup');
+  addedAnim?.cancel();
+  const from = g.offsetHeight;
+  g.classList.toggle('open', open);
+  if (reduceMotion || g.hidden) return;
+  const to = g.offsetHeight;
+  g.style.overflowY = 'clip';   // clip vertically only: the open box hangs 12px past the column on each side
+  addedAnim = g.animate([{ height: from + 'px' }, { height: to + 'px' }], { duration: 460, easing: EASE_OUT });
+  addedAnim.finished.then(() => { g.style.overflowY = ''; }, () => {});
+  const show = open ? g.querySelector('.wa-box') : $('weAdded');
+  show.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 260, easing: 'linear' });
+  if (open) g.querySelectorAll('#addedList .item').forEach((el, i) => el.animate(
+    [{ opacity: 0, transform: 'translateY(-8px)' }, { opacity: 1, transform: 'none' }],
+    { duration: 340, delay: 60 + i * 35, easing: EASE_OUT, fill: 'backwards' }));
+}
+
+// Find who just arrived (added, or moved between groups) and show them: after the
+// current burst of changes settles, scroll the first arrival into view and slide + tint it.
+let placed = null;
+let addedBefore = null;
+const arrivals = new Set();
+let arrivalsQueued = false;
+
+function noteArrivals(groups) {
+  const now = new Map();
+  Object.entries(groups).forEach(([g, list]) => list.forEach(c => now.set(c.id, g)));
+  if (placed) now.forEach((g, id) => { if (placed.get(id) !== g) arrivals.add(id); });   // hidden rows are skipped later
+  placed = now;
+  const addedCount = groups.added.length;
+  if (addedBefore !== null && addedCount > addedBefore) arrivals.add('__added');
+  addedBefore = addedCount;
+  if (arrivals.size && !arrivalsQueued) { arrivalsQueued = true; queueMicrotask(showArrivals); }
+}
+
+function showArrivals() {
+  arrivalsQueued = false;
+  const lists = document.querySelector('.lists');
+  const items = [...arrivals]
+    .map(id => id === '__added' ? $('weAdded') : lists.querySelector(`.item[data-id="${id}"]`))
+    .filter(el => el && el.offsetParent);
+  arrivals.clear();
+  if (!items.length) return;
+  const topIn = el => el.getBoundingClientRect().top - lists.getBoundingClientRect().top + lists.scrollTop;
+  items.sort((a, b) => topIn(a) - topIn(b));
+
+  // Bring the first arrival into view (only if it's out of sight): jump, then glide the content (FLIP)
+  const first = items[0], pad = 40, top = topIn(first), bottom = top + first.offsetHeight;
+  if (top < lists.scrollTop + pad || bottom > lists.scrollTop + lists.clientHeight - pad) {
+    const max = lists.scrollHeight - lists.clientHeight;
+    const target = Math.min(max, Math.max(0, top - lists.clientHeight / 2 + first.offsetHeight / 2));
+    const delta = target - lists.scrollTop;
+    lists.scrollTop = target;
+    if (!reduceMotion && delta) [...lists.children].forEach(g => g.animate(
+      [{ transform: `translateY(${delta}px)` }, { transform: 'none' }], { duration: 420, easing: EASE_OUT }));
+  }
+
+  items.forEach((el, i) => {
+    if (!reduceMotion && el.classList.contains('item')) el.animate(
+      [{ opacity: 0, transform: 'translateX(14px)' }, { opacity: 1, transform: 'none' }],
+      { duration: 320, delay: i * 40, easing: EASE_OUT, fill: 'backwards' });
+    el.classList.remove('arrived'); void el.offsetWidth; el.classList.add('arrived');
   });
-  return queue;
-};
+}
 
-$('pgPrev').addEventListener('click', () => go(-1));
-$('pgNext').addEventListener('click', () => go(1));
+function renderShortlist() {
+  const list = api.shortlist();
+  const groups = {
+    added: list.filter(c => c.source === 'known' && c.priority),       // creators you know, invited first by default
+    prio: list.filter(c => c.source === 'suggested' && c.priority),
+    rest: list.filter(c => !c.priority),                                // normal invites, from either source
+  };
+  $('waCount').textContent = groups.added.length;
+  $('waStack').innerHTML = stackHTML(groups.added, 4, 'wa');
+  renderList($('addedList'), groups.added);
+  renderList($('priorityList'), groups.prio);
+  renderList($('everyoneList'), groups.rest);
+  $('addedGroup').hidden = !groups.added.length;
+  $('priorityList').closest('.group').hidden = !groups.prio.length;
+  $('everyoneList').closest('.group').hidden = !groups.rest.length;
+  $('invitesEmpty').hidden = groups.prio.length + groups.rest.length > 0;   // initial state: only "We added for you"
+  $('slEmpty').hidden = list.length > 0;
+  document.querySelector('.lists').hidden = list.length === 0;
+  noteArrivals(groups);
 
-// Add: add them, show "Added" for a beat, then deal the next card.
-// Tapping it on someone already added just removes them (no swipe).
-$('sgAdd').addEventListener('click', () => {
-  const c = api.get(currentId());
-  if (!c) return;
-  if (c.shortlisted) return api.setShortlisted(c.id, false);
-  api.setShortlisted(c.id, true);
-  if (current < inPlay().length - 1) setTimeout(() => go(1), 350);
-});
-// Star: prioritize (adds them too if needed), show the purple star for a beat,
-// then deal the next card, same as Add. Un-starring stays on the card (no swipe).
-$('sgStar').addEventListener('click', () => {
-  const c = api.get(currentId());
-  if (!c) return;
-  if (c.priority) return api.setPriority(c.id, false);
-  api.setPriority(c.id, true);
-  if (current < inPlay().length - 1) setTimeout(() => go(1), 350);
-});
+  const n = list.length;
+  $('slCount').textContent = n;
+  $('inviteCount').textContent = n;
+  $('target').textContent = api.TARGET;
+  $('barFill').style.width = Math.min(100, n / api.TARGET * 100) + '%';
+  $('allCount').textContent = api.known().length + api.suggestions().filter(c => !c.dismissed).length;
+}
 
-// Not a Fit: the card swipes away and drops out of the deck; the next one takes its slot.
-document.querySelector('.btn-ghost').addEventListener('click', () => {
-  const id = currentId();
-  if (!id) return;
-  swap('next', () => api.dismiss(id));
+// A row folds away first, then the change lands (and the creator reappears where they now belong)
+function leave(el) {
+  if (el.dataset.leaving) return null;
+  el.dataset.leaving = 1;
+  el.style.overflow = 'hidden';
+  if (reduceMotion) return Promise.resolve();
+  const anim = el.animate([
+    { opacity: 1, height: el.offsetHeight + 'px', transform: 'none' },
+    { opacity: 0, height: '0px', transform: 'translateX(16px)' },
+  ], { duration: 240, easing: EASE_IN_OUT, fill: 'forwards' });
+  // the change must land even if the tab is in the background and animations are paused
+  return Promise.race([anim.finished, new Promise(r => setTimeout(r, 260))]);
+}
+
+document.querySelector('.right').addEventListener('click', e => {
+  const item = e.target.closest('.item');
+  if (!item) return;
+  const id = item.dataset.id;
+  const act = e.target.closest('.item-x') ? () => api.setShortlisted(id, false)
+    : e.target.closest('.item-star') ? () => api.setPriority(id, false)
+    : e.target.closest('.item-bolt') ? () => api.setPriority(id, true)
+    : null;
+  if (act) leave(item)?.then(act);
 });
 
 // ---------- Re-render whenever the "backend" changes ----------
-function renderAll() { renderRows(); renderShortlist(); renderSuggestion(); }
+function renderAll() {
+  renderKnownBar();
+  renderShortlist();
+  suggestDeck.refresh();
+  if (known.classList.contains('open')) known.classList.contains('as-table') ? renderKnTable() : knownDeck.render();
+}
 api.onChange(renderAll);
 renderAll();
+warmAround(suggestDeck);
+warm(api.known()[0]);
 
-// ---------- Modal open / close and steps ----------
+// ---------- Modal open / close ----------
 const modal = $('modal');
 const overlay = $('overlay');
 const setOpen = open => { modal.classList.toggle('hidden', !open); overlay.classList.toggle('hidden', !open); };
 $('closeModal').addEventListener('click', () => setOpen(false));
 overlay.addEventListener('click', () => setOpen(false));
 $('openModal').addEventListener('click', () => setOpen(true));
-document.addEventListener('keydown', e => { if (e.key === 'Escape') setOpen(false); });
+// Esc steps back one level: the popup, then the expanded deck, then the modal
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (!$('pop').hidden) closePop();
+  else if (known.classList.contains('open')) setKnownOpen(false);
+  else setOpen(false);
+});
 
-const setStep = n => { modal.dataset.step = n; };
-$('nextBtn').addEventListener('click', () => setStep(2));
-$('backBtn').addEventListener('click', () => setStep(1));
-if (location.hash === '#step2') setStep(2);
-warmNeighbours();
+// ---------- V2: "Start with creators you know" popup ----------
+// Edits go into a draft; Save sends them to the backend, Cancel / × / Esc drop them.
+let draft = null;
+let sortDesc = false;
+const TAG_ORDER = ['fav', 'again', 'missed'];
+
+// One table row for a creator you know: shared by the V2 popup and the V3 inline table
+const knownRowHTML = c => `
+    <div class="pop-row" data-id="${c.id}">
+      <div class="pr-who">
+        ${avatar(c.avatar, false)}
+        <div class="pr-info">
+          <div class="pr-name"><b>${c.name}</b><img src="assets/verified.svg" alt=""></div>
+          <p class="pr-sub">${c.sub}</p>
+        </div>
+      </div>
+      <span class="cc-tag ${c.tag}"><img src="assets/${TAGS[c.tag].icon}" alt="">${TAGS[c.tag].label}</span>
+      <div class="mini${c.shortlisted ? ' added' : ''}${c.priority ? ' prio' : ''}">
+        <button class="mini-add" data-act="add" aria-label="${c.shortlisted ? 'Remove' : 'Add'} ${c.name}">
+          <img src="assets/${c.shortlisted ? 'check-12' : 'plus-12'}.svg" alt="" width="12" height="12">${c.shortlisted ? 'Added' : 'Add'}
+        </button>
+        <button class="mini-star" data-act="prio" aria-label="Priority invite for ${c.name}">
+          <img src="assets/bolt-16${c.priority ? '-white' : ''}.svg" alt="" width="16" height="16">
+        </button>
+      </div>
+    </div>`;
+const byTag = rows => rows.sort((a, b) => (TAG_ORDER.indexOf(a.tag) - TAG_ORDER.indexOf(b.tag)) * (sortDesc ? -1 : 1));
+
+function renderPop() {
+  const rows = byTag(api.known().map(c => ({ ...c, ...draft[c.id] })));
+  $('popCount').textContent = `(${rows.filter(c => c.shortlisted).length})`;
+  $('popRows').innerHTML = rows.map(knownRowHTML).join('');
+}
+
+$('popRows').addEventListener('click', e => {
+  const btn = e.target.closest('[data-act]');
+  if (!btn) return;
+  const d = draft[btn.closest('.pop-row').dataset.id];
+  if (btn.dataset.act === 'add') { d.shortlisted = !d.shortlisted; if (!d.shortlisted) d.priority = false; }
+  else { d.priority = !d.priority; if (d.priority) d.shortlisted = true; }   // same rules as the backend
+  renderPop();
+});
+$('popSort').addEventListener('click', () => { sortDesc = !sortDesc; renderPop(); });
+
+// ---------- V3: the expanded block is a table; changes apply straight away, like V1 ----------
+function renderKnTable() { $('ktRows').innerHTML = byTag(api.known()).map(knownRowHTML).join(''); }
+$('ktRows').addEventListener('click', e => {
+  const btn = e.target.closest('[data-act]');
+  if (!btn) return;
+  const c = api.get(btn.closest('.pop-row').dataset.id);
+  if (btn.dataset.act === 'add') api.setShortlisted(c.id, !c.shortlisted);
+  else api.setPriority(c.id, !c.priority);
+});
+$('ktSort').addEventListener('click', () => { sortDesc = !sortDesc; renderKnTable(); });
+
+function openPop() {
+  draft = Object.fromEntries(api.known().map(c => [c.id, { shortlisted: c.shortlisted, priority: c.priority }]));
+  renderPop();
+  $('popOverlay').hidden = $('pop').hidden = false;
+  if (reduceMotion) return;
+  $('popOverlay').animate([{ opacity: 0 }, { opacity: 1 }], { duration: 220, easing: 'linear' });
+  $('pop').animate([{ opacity: 0, transform: 'translateY(12px) scale(.97)' }, { opacity: 1, transform: 'none' }],
+    { duration: 320, easing: EASE_OUT });
+}
+
+function closePop(save = false) {
+  if (save) api.known().forEach(c => {
+    const d = draft[c.id];
+    if (d.shortlisted !== c.shortlisted) api.setShortlisted(c.id, d.shortlisted);
+    if (d.priority !== api.get(c.id).priority) api.setPriority(c.id, d.priority);
+  });
+  const hide = () => { $('popOverlay').hidden = $('pop').hidden = true; };
+  if (reduceMotion) return hide();
+  $('popOverlay').animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, easing: 'linear', fill: 'forwards' });
+  const a = $('pop').animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(8px) scale(.98)' }],
+    { duration: 200, easing: EASE_IN_OUT, fill: 'forwards' });
+  Promise.race([a.finished, new Promise(r => setTimeout(r, 220))]).then(() => {
+    hide(); $('pop').getAnimations().forEach(x => x.cancel()); $('popOverlay').getAnimations().forEach(x => x.cancel());
+  });
+}
+$('popSave').addEventListener('click', () => closePop(true));
+$('popCancel').addEventListener('click', () => closePop());
+$('popClose').addEventListener('click', () => closePop());
+$('popOverlay').addEventListener('click', () => closePop());
+
+// ---------- Prototype version switch (V1 / V2), remembered per browser ----------
+let version = 'v1';
+try { version = localStorage.getItem('invite-version') || 'v1'; } catch {}
+const hashVersion = location.hash.match(/v[123]/);   // #v1 / #v2 / #v3 pick a version
+if (hashVersion) version = hashVersion[0];
+function setVersion(v) {
+  if (known.classList.contains('open')) setKnownOpen(false);   // close the current version's editor first
+  if (!$('pop').hidden) closePop();
+  version = v;
+  try { localStorage.setItem('invite-version', v); } catch {}
+  document.querySelector('.ver').dataset.on = v;
+  document.querySelectorAll('.ver-opt').forEach(b => b.setAttribute('aria-checked', b.dataset.ver === v));
+}
+document.querySelectorAll('.ver-opt').forEach(b => b.addEventListener('click', () => setVersion(b.dataset.ver)));
+setVersion(version);
+// Always start with the editor closed, whatever is in the URL
+if (location.hash) history.replaceState(null, '', location.pathname + location.search);

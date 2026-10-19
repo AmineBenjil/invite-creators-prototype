@@ -1,10 +1,14 @@
 # Invite Creators — prototype
 
-Clickable HTML/CSS/JS prototype of Benable's two-step **Invite Creators** modal, built from the Figma designs.
+Clickable HTML/CSS/JS prototype of Benable's **Invite Creators** modal, built from the Figma designs.
 
-- **Step 1 — Creators you know:** add creators to the shortlist, star them for priority, filter by "For you" tag, hover a name for their profile card.
-- **Step 2 — New suggestions:** a swipeable deck of suggested creators (Add, star, Not a Fit, ‹ › to browse).
-- The right panel and the "Your list" meter update live from a fake in-memory backend (`mock-api.js`). Everything resets on reload.
+- **Suggestions deck:** swipe through suggested creators (‹ ›, Add, ⚡ priority invite, Not a Fit). Added creators fly into the shortlist panel and leave the deck.
+- **Creators you know:** the "8 creators on your list" bar opens an editor. A pill at the top of the page switches between three versions to A/B test:
+  - **V1 — Inline edit:** the bar expands into a swipeable card deck.
+  - **V2 — Edit popup:** a popup table; changes apply on Save.
+  - **V3 — Inline table:** the bar expands into a table.
+- **Shortlist panel:** "We added for you", Priority Invite and Also on your list, newest first. Hover a normal invite to make it a priority invite.
+- Everything runs on a fake in-memory backend (`mock-api.js`) and resets on reload.
 
 ## Run it
 
@@ -14,4 +18,4 @@ No build step. Serve the folder with any static server, for example:
 python3 -m http.server 5173
 ```
 
-Then open http://localhost:5173 (add `#step2` to open straight on step 2).
+Then open http://localhost:5173 (add `#v2` or `#v3` to start on that version).
