@@ -96,17 +96,12 @@ const OFFSCREEN = 'translate(-1000px, 80px) rotate(-18deg)';
 // Where an added card flies to: from its own centre to the upper middle of the shortlist list
 function intoPanel(el) {
   const r = el.getBoundingClientRect(), t = document.querySelector('.lists').getBoundingClientRect();
-  const dx = t.left + t.width / 2 - (r.left + r.width / 2);
-  const dy = t.top + 120 - (r.top + r.height / 2);
-  return `translate(${dx}px, ${dy}px) scale(.22)`;
+  return { dx: t.left + t.width / 2 - (r.left + r.width / 2), dy: t.top + 120 - (r.top + r.height / 2) };
 }
 
 // Cards use the 16px plus (Figma 15204 / 15212); Added shows the 12px check
 function setAddIcon(split, added) {
-  const img = split.querySelector('.i-add');
-  const big = !added;
-  img.src = `assets/${added ? 'check-12' : big ? 'plus-16' : 'plus-12'}.svg`;
-  img.width = img.height = big ? 16 : 12;
+  split.querySelector('.i-add').classList.toggle('is-check', added);   // [PRIORITY-MORPH] masked icon, takes the text colour
 }
 
 const modalEl = document.getElementById('modal');
@@ -135,10 +130,10 @@ function makeDeck({ card, body, list, pager }) {
     split.classList.toggle('added', c.shortlisted);
     split.classList.toggle('prio', c.priority);
     setAddIcon(split, c.shortlisted);
-    split.querySelector('.l-add').textContent = c.shortlisted ? 'Added' : 'Add';
+    split.querySelector('.l-add').textContent = c.shortlisted ? 'Added' : 'Shortlist';
     // Tooltips say what a click will do
     split.querySelector('.split-add').dataset.tip = c.shortlisted ? 'Remove from your shortlist' : 'Add creator to your shortlist';
-    split.querySelector('.split-star').dataset.tip = c.priority ? 'Remove priority invite' : 'Priority invite';
+    // ⚡ has no tooltip: hovering it already previews "⚡ Priority" [PRIORITY-MORPH]
     renderPager(deck);
   };
 
@@ -167,10 +162,12 @@ function makeDeck({ card, body, list, pager }) {
     deck.running.cleanup();
   };
 
-  deck.swap = (direction, change) => {
+  // onCopy(copy): optional, runs on the moving copy right after it's made (e.g. to animate its button)
+  deck.swap = (direction, change, onCopy, opts = {}) => {
     finishRunning();
     card.classList.add('no-tx');
     const old = flyingCopy(direction === 'add');
+    onCopy?.(old);
     change();
     let anims, incoming;
     if (reduceMotion) {
@@ -179,14 +176,28 @@ function makeDeck({ card, body, list, pager }) {
         card.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160 }),
       ];
     } else if (direction === 'add') {
-      // Added: the card shrinks away to the right, into the shortlist panel, while the
-      // next card dissolves up in its place
+      // [PRIORITY-MORPH] "Lift, then throw": the card lifts in place while its button changes
+      // (readable at full size), then slides toward the shortlist panel still near full size and
+      // only shrinks + fades as it reaches the list. ⚡ gets a longer lift than Add.
+      const { dx, dy } = intoPanel(old);
+      const total = opts.prio ? 800 : 700, lift = (opts.prio ? 200 : 160) / total;   // ⚡ was previewed on hover, so a shorter lift
       old.style.transformOrigin = '50% 50%';
       anims = [
-        old.animate([{ transform: 'none' }, { transform: intoPanel(old) }], { duration: 560, easing: 'cubic-bezier(.55, 0, .25, 1)', fill: 'forwards' }),
-        old.animate([{ opacity: 1 }, { opacity: 1, offset: .5 }, { opacity: 0 }], { duration: 560, easing: 'linear', fill: 'forwards' }),
+        old.animate([
+          { offset: 0, transform: 'none', easing: EASE_OUT },
+          // the slide speeds up into the joint and the final leg leaves at that speed, so no hitch
+          { offset: lift, transform: 'translateY(-4px) scale(1.02)', easing: 'cubic-bezier(.5, 0, .8, .6)' },
+          { offset: lift + (1 - lift) * .4, transform: `translate(${dx * .4}px, ${dy * .4 - 4}px) scale(.9)`, easing: 'cubic-bezier(.2, .55, .3, 1)' },
+          { offset: 1, transform: `translate(${dx}px, ${dy}px) scale(.22)` },
+        ], { duration: total, fill: 'forwards' }),
+        old.animate([
+          { offset: 0, boxShadow: '0 4px 24px rgba(0,0,0,.04)' },
+          { offset: lift, boxShadow: '0 18px 40px rgba(0,0,0,.14)' },
+          { offset: 1, boxShadow: '0 4px 12px rgba(0,0,0,0)' },
+        ], { duration: total, easing: 'linear', fill: 'forwards' }),
+        old.animate([{ opacity: 1 }, { opacity: 1, offset: .72 }, { opacity: 0 }], { duration: total, easing: 'linear', fill: 'forwards' }),
         card.animate([{ transform: DECK, opacity: 0 }, { transform: 'none', opacity: 1 }],
-          { duration: 440, delay: 220, easing: EASE_OUT, fill: 'backwards' }),
+          { duration: 440, delay: total * .55, easing: EASE_OUT, fill: 'backwards' }),
       ];
     } else if (direction === 'next') {
       old.style.transformOrigin = '50% 140%';
@@ -253,20 +264,23 @@ function makeDeck({ card, body, list, pager }) {
     // the deck; creators you know stay in it and the deck moves on to the next one.
     const turningOn = act === 'add' ? !c.shortlisted : act === 'prio' && !c.priority;
     if (turningOn) {
-      if (deck.sending) return;
-      deck.sending = true;
-      const split = card.querySelector('.split');   // show the new state for a beat first
-      split.classList.add('added');
-      if (act === 'prio') split.classList.add('prio');
-      setAddIcon(split, true);
-      split.querySelector('.l-add').textContent = 'Added';
-      setTimeout(() => {
-        deck.sending = false;
-        deck.swap('add', () => {
-          act === 'prio' ? api.setPriority(c.id, true) : api.setShortlisted(c.id, true);
-          if (c.source === 'known' && deck.index < deck.list().length - 1) { deck.index++; deck.render(); }
-        });
-      }, reduceMotion ? 0 : 200);
+      // The card leaves straight away; its button switches to Added / Priority on the way into
+      // the panel, so the state change and the flight play as one motion
+      deck.swap('add', () => {
+        act === 'prio' ? api.setPriority(c.id, true) : api.setShortlisted(c.id, true);
+        if (c.source === 'known' && deck.index < deck.list().length - 1) { deck.index++; deck.render(); }
+      }, copy => {
+        copy.classList.remove('no-tx');   // the copy inherits the card's no-transition flag; let its button animate
+        const split = copy.querySelector('.split'), orig = card.querySelector('.split');
+        // [PRIORITY-MORPH] the copy isn't under the pointer, so carry over the hover look it had
+        if (orig.matches(':has(.split-star:hover)')) split.classList.add('peek');
+        if (orig.matches(':has(.split-add:hover)')) split.classList.add('hov-add');
+        void split.offsetWidth;           // commit the starting look before switching state
+        split.classList.add('added');
+        if (act === 'prio') split.classList.add('prio');   // [PRIORITY-MORPH] morphs into "⚡ Priority" mid-flight
+        setAddIcon(split, true);
+        split.querySelector('.l-add').textContent = 'Added';
+      }, { prio: act === 'prio' });
       return;
     }
     if (act === 'add') api.setShortlisted(c.id, false);   // turning off: stays on this card
@@ -391,10 +405,11 @@ $('weAdded').addEventListener('click', () => version === 'v2' ? openPop() : setK
 
 // ---------- Right panel: the shortlist ----------
 // ⚡ shows on everyone invited first; tapping it moves them down to a normal invite.
+// [PRIORITY-MORPH] priority ⚡ is green, matching the card's Priority pill (was bolt-20-panel.svg, purple)
 // Normal invites get a grey ⚡ on hover that makes them a priority invite.
 const BOLT = c => c.priority
-  ? `<button class="item-star" title="Remove from first priority" aria-label="Remove ${c.name} from first priority"><img src="assets/bolt-20-panel.svg" alt=""></button>`
-  : `<button class="item-bolt" title="Priority invite" aria-label="Make ${c.name} a priority invite"><img class="b-off" src="assets/bolt-20-grey.svg" alt=""><img class="b-on" src="assets/bolt-20-panel.svg" alt=""></button>`;
+  ? `<button class="item-star" title="Remove from first priority" aria-label="Remove ${c.name} from first priority"><img src="assets/bolt-20-green.svg" alt=""></button>`
+  : `<button class="item-bolt" title="Priority invite" aria-label="Make ${c.name} a priority invite"><img class="b-off" src="assets/bolt-20-grey.svg" alt=""><img class="b-on" src="assets/bolt-20-green.svg" alt=""></button>`;
 
 function renderList(el, list) {
   el.innerHTML = list.map(c => `
