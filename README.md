@@ -7,7 +7,7 @@ Clickable HTML/CSS/JS prototype of Benable's **Invite Creators** modal, built fr
   - **V1 — Inline edit:** the bar expands into a swipeable card deck.
   - **V2 — Edit popup:** a popup table; changes apply on Save.
   - **V3 — Inline table:** the bar expands into a table.
-- **Shortlist panel:** "We added for you", Priority Invite and Also on your list, newest first. Hover a normal invite to make it a priority invite.
+- **Shortlist panel:** "We added for you", Priority and Invites, newest first. Hover a normal invite to make it a priority invite.
 - Everything runs on a fake in-memory backend (`mock-api.js`) and resets on reload.
 
 ## Run it
