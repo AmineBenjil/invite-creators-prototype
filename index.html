@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=30">
+  <link rel="stylesheet" href="styles.css?v=34">
 </head>
 <body>
   <!-- ===== Background page ===== -->
@@ -71,8 +71,8 @@
       <div class="dc-foot">
         <button class="btn-ghost" data-act="skip">Not a Fit</button>
         <div class="split">
-          <button class="split-add" data-act="add"><span class="i-add"></span><span class="l-add">Shortlist</span></button>
-          <button class="split-star" data-act="prio" aria-label="Priority invite"><span class="i-bolt"></span><span class="l-prio">Priority</span><!-- [PRIORITY-MORPH] --></button>
+          <button class="split-add" data-act="add"><img class="i-add" src="assets/plus-16.svg" alt="" width="16" height="16"><span class="l-add">Add</span></button>
+          <button class="split-star" data-act="prio" aria-label="Priority invite"><img src="assets/prio-20.svg" alt="" width="20" height="20"></button>
         </div>
       </div>
     </div>
@@ -104,8 +104,8 @@
           <div class="dc-foot">
             <button class="btn-ghost" data-act="skip">Not a Fit</button>
             <div class="split">
-              <button class="split-add" data-act="add"><span class="i-add"></span><span class="l-add">Shortlist</span></button>
-              <button class="split-star" data-act="prio" aria-label="Priority invite"><span class="i-bolt"></span><span class="l-prio">Priority</span><!-- [PRIORITY-MORPH] --></button>
+              <button class="split-add" data-act="add"><img class="i-add" src="assets/plus-16.svg" alt="" width="16" height="16"><span class="l-add">Add</span></button>
+              <button class="split-star" data-act="prio" aria-label="Priority invite"><img src="assets/prio-20.svg" alt="" width="20" height="20"></button>
             </div>
           </div>
         </div>
@@ -160,7 +160,14 @@
           </button>
           <!-- Expanded while editing: every creator we added, each with ⚡ (invite first) and × -->
           <div class="wa-box">
-            <div class="list" id="addedList"></div>
+            <div class="wa-sub">
+              <p class="wa-label">Priority</p>
+              <div class="list" id="addedList"></div>
+            </div>
+            <div class="wa-sub">
+              <p class="wa-label">Standard</p>
+              <div class="list" id="addedStdList"></div>
+            </div>
           </div>
         </div>
         <!-- Nobody new invited yet (Figma 15213:112007) -->
@@ -221,7 +228,7 @@
     <button class="ver-opt" role="radio" data-ver="v3">V3 <small>Inline table</small></button>
   </div>
 
-  <script src="mock-api.js?v=30"></script>
-  <script src="app.js?v=30"></script>
+  <script src="mock-api.js?v=34"></script>
+  <script src="app.js?v=34"></script>
 </body>
 </html>

@@ -178,56 +178,13 @@ b.stat-row { height: 15.594px; }
   border: 1px solid #c6c6c6; border-right: 0; border-radius: 24px 0 0 24px;
   font-size: 14px; font-weight: 500; color: #1c1c1c; white-space: nowrap;
 }
-.split-star { border: 1px solid #c6c6c6; border-radius: 0 24px 24px 0; }
+.split-star { padding: 5px 13px 5px 9px; border: 1px solid #c6c6c6; border-radius: 0 24px 24px 0; }
 .split-star img { width: 20px; height: 20px; }
+.split:not(.added) button:hover { background: #fafafa; }
 .split.added .split-add { padding: 5px 1px; background: #f5f3fc; border: 1px solid #7a5cfa; color: #7a5cfa; }
-.split.added .split-star { border-left: 0; }
-
-/* [PRIORITY-MORPH] experiment, 2026-10-20 — to revert, restore styles.css / index.html / app.js
-   from the last GitHub commit (every related line is tagged PRIORITY-MORPH).
-   Shortlist / Priority pill, same 160px width in every state:
-   - hover "Shortlist": icon + label turn purple
-   - hover ⚡: the Shortlist half shrinks to just "+", the ⚡ half grows and shows a green
-     "⚡ Priority" (white, outlined) — a preview of what a click does
-   - priority on: the pill is all green "⚡ Priority" (the Shortlist half folds away) */
-.split { width: 160px; }
-.i-add, .i-bolt { display: block; flex: none; background: currentColor; -webkit-mask: center / contain no-repeat; mask: center / contain no-repeat; }
-.i-add { width: 16px; height: 16px; -webkit-mask-image: url(assets/plus-16.svg); mask-image: url(assets/plus-16.svg); }
-.i-add.is-check { width: 12px; height: 12px; -webkit-mask-image: url(assets/check-12.svg); mask-image: url(assets/check-12.svg); }
-.i-bolt { width: 20px; height: 20px; -webkit-mask-image: url(assets/bolt-20.svg); mask-image: url(assets/bolt-20.svg); }
-/* Icons are anchored to the left edge of their half (flex-start + padding-left), so as the halves
-   resize the + stays put and the ⚡ slides left with the growing edge while the label is revealed. */
-.split .split-add {
-  flex: 0 0 auto; width: 117px; min-width: 0; padding: 0 0 0 18px; gap: 8px; justify-content: flex-start;
-  color: #1c1c1c; background: #fff;
-  transition: width .38s cubic-bezier(.22,1,.36,1), padding .38s cubic-bezier(.22,1,.36,1), background .15s, border-color .15s, color .15s;
-}
-.split.added .split-add { padding: 0 0 0 25.5px; }
-.split .split-star {
-  flex: 1 1 auto; min-width: 0; padding: 0 0 0 10.5px; gap: 8px; justify-content: flex-start; color: #000; background: #fff;
-  transition: padding .38s cubic-bezier(.22,1,.36,1), background .25s, border-color .25s, color .2s, border-radius .38s cubic-bezier(.22,1,.36,1);
-}
-.split.added .split-star { padding-left: 11px; }
-.l-add, .l-prio { display: block; overflow: hidden; white-space: nowrap; font-size: 14px; font-weight: 500;
-  transition: max-width .38s cubic-bezier(.22,1,.36,1), opacity .2s; }
-.l-add { max-width: 56px; }
-.l-prio { max-width: 0; opacity: 0; color: #448e6e; }
-/* hover "Shortlist" */
-.split:not(.added) .split-add:hover, .split.hov-add:not(.added) .split-add { color: #7a5cfa; }
-/* hover ⚡ (or a flying copy that was hovered): preview "⚡ Priority" */
-.split:not(.prio):has(.split-star:hover) .split-add, .split.peek:not(.prio) .split-add { width: 42px; padding-left: 12.5px; }
-.split.added:not(.prio):has(.split-star:hover) .split-add, .split.added.peek:not(.prio) .split-add { padding-left: 14px; }
-.split:not(.prio):has(.split-star:hover) .l-add, .split.peek:not(.prio) .l-add { max-width: 0; opacity: 0; }
-.split:not(.prio):has(.split-star:hover) .split-star, .split.peek:not(.prio) .split-star { color: #57ac89; padding-left: 19.7px; }
-.split:not(.prio):has(.split-star:hover) .l-prio, .split.peek:not(.prio) .l-prio { max-width: 49px; opacity: 1; }
-/* priority on */
-.split.prio .split-add { width: 0; padding: 0; border-width: 0; }
-.split.prio .split-add > * { opacity: 0; }
-.split.prio .split-star, .sg-card .split.prio .split-star, .kn-card .split.prio .split-star {
-  padding-left: 40.7px; color: #fff; background: #448e6e; border: 1px solid #448e6e; border-radius: 24px;
-}
-.split.prio .l-prio { max-width: 49px; opacity: 1; color: #fff; }
-/* [PRIORITY-MORPH] END */
+.split.added .split-star { padding: 5px 13px 5px 8px; border-left: 0; }
+.split.prio .split-star { padding: 4px 12px 4px 8px; background: #7a5cfa; border: 0; }
+.split.prio .split-star img { filter: brightness(0) invert(1); }
 
 /* Hover tooltips on Add / ⚡: appear after a 1.5s hover, vanish as soon as the pointer leaves */
 .split button { position: relative; }
@@ -393,6 +350,11 @@ b.stat-row { height: 15.594px; }
 #addedGroup.open { margin-bottom: 1px; }
 #addedGroup.open > .we-added { display: none; }
 #addedGroup.open .wa-box { display: flex; }
+/* Priority / Standard inside "We added for you" */
+.wa-box { gap: 8px; }
+.wa-sub { display: flex; flex-direction: column; gap: 2px; }
+.wa-sub[hidden] { display: none; }
+.wa-label { padding-top: 4px; font-size: 11px; font-weight: 600; color: #999; white-space: nowrap; }
 
 /* Arrival highlight */
 .item.arrived::before, .we-added.arrived {
