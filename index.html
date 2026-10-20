@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=34">
+  <link rel="stylesheet" href="styles.css?v=35">
 </head>
 <body>
   <!-- ===== Background page ===== -->
@@ -83,7 +83,7 @@
         <div class="kn-stack" id="knStack"></div>
         <div class="kn-text">
           <p class="kn-title"><b><span id="knCount">8</span> creators</b> on your list</p>
-          <p class="kn-sub" id="knSub">Creators you loved working with are already on your list</p>
+          <p class="kn-sub" id="knSub">Creators you loved working with or picked last time</p>
         </div>
         <button class="kn-edit" id="knEdit" aria-expanded="false">
           <span id="knEditLabel">Edit</span>
@@ -156,7 +156,7 @@
           <p class="group-title">We added for you</p>
           <button class="we-added" id="weAdded">
             <span class="wa-stack" id="waStack"></span>
-            <span class="wa-text"><b><span id="waCount">8</span> creators</b> on your list you loved working with</span>
+            <span class="wa-text" id="waText"><b>8 creators</b>: 6 you loved working with, 2 you picked last time</span>
           </button>
           <!-- Expanded while editing: every creator we added, each with ⚡ (invite first) and × -->
           <div class="wa-box">
@@ -228,7 +228,7 @@
     <button class="ver-opt" role="radio" data-ver="v3">V3 <small>Inline table</small></button>
   </div>
 
-  <script src="mock-api.js?v=34"></script>
-  <script src="app.js?v=34"></script>
+  <script src="mock-api.js?v=35"></script>
+  <script src="app.js?v=35"></script>
 </body>
 </html>

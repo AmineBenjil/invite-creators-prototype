@@ -331,7 +331,7 @@ function renderKnownBar() {
   $('knCount').textContent = on.length;
   $('knStack').innerHTML = stackHTML(on, 4, 'kn');
   $('knSub').textContent = on.length
-    ? 'Creators you loved working with are already on your list'
+    ? 'Creators you loved working with or picked last time'
     : 'Add creators you’ve worked with before';
 }
 
@@ -475,6 +475,15 @@ function showArrivals() {
   });
 }
 
+// "8 creators: 6 you loved working with, 2 you picked last time". Favorite and Would work again
+// count as loved working with, Missed last time as picked last time; a part that's zero drops out.
+function weAddedText(list) {
+  const n = list.length, missed = list.filter(c => c.tag === 'missed').length;
+  const parts = [[n - missed, 'you loved working with'], [missed, 'you picked last time']].filter(([k]) => k);
+  const head = `<b>${n} creator${n === 1 ? '' : 's'}</b>`;
+  return parts.length === 1 ? `${head} ${parts[0][1]}` : `${head}: ${parts.map(([k, t]) => `${k} ${t}`).join(', ')}`;
+}
+
 function renderShortlist() {
   const list = api.shortlist();
   const groups = {
@@ -485,7 +494,7 @@ function renderShortlist() {
     rest: list.filter(c => c.source === 'suggested' && !c.priority),
   };
   const ours = [...groups.added, ...groups.addedStd];
-  $('waCount').textContent = ours.length;
+  $('waText').innerHTML = weAddedText(ours);
   $('waStack').innerHTML = stackHTML(ours, 4, 'wa');
   renderList($('addedList'), groups.added);
   renderList($('addedStdList'), groups.addedStd);
