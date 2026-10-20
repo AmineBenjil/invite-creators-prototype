@@ -98,7 +98,7 @@ img { display: block; max-width: none; }
   box-shadow: 0 4px 24px 0 rgba(0,0,0,0.04);
 }
 /* Positioned by class (not id) so the moving copies made during a swipe land exactly on the card */
-.sg-card { left: 23px; bottom: 150px; height: 508px; box-shadow: 0 12px 24px 0 rgba(0,0,0,0.04); }
+.sg-card { left: 23px; bottom: 150px; height: 502px; box-shadow: 0 12px 24px 0 rgba(0,0,0,0.04); }
 .sg-card .dc-foot { padding: 16px 24px; border: 0.5px solid #e3e3e3; border-bottom: 0; border-left: 0; border-right: 0; }
 .sg-card .btn-ghost { color: #6a6a6a; }
 .sg-card .split-add { gap: 8px; }
@@ -209,22 +209,23 @@ b.stat-row { height: 15.594px; }
 
 /* ===== Creators you know: collapsed bar → expanded deck ===== */
 .known {
-  position: absolute; left: 23px; top: 80px; width: 630px; height: 57px; overflow: hidden; z-index: 2;
+  position: absolute; left: 23px; top: 80px; width: 630px; height: 65px; overflow: hidden; z-index: 2;
   background: #fff; border: 0.5px solid #e3e3e3; border-radius: 16px;
   box-shadow: 0 4px 24px 0 rgba(0,0,0,0.04);
 }
-.kn-bar { position: relative; height: 56px; }
-.kn-stack { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; transition: transform .48s cubic-bezier(.22,1,.36,1); }
-.kn-av { position: relative; width: 32px; height: 32px; margin-right: -14px; transition: margin .48s cubic-bezier(.22,1,.36,1); flex-shrink: 0; border: 2px solid #fff; border-radius: 100px; background: #f1b2b2; overflow: hidden; }
+/* Bar (Figma 15204:68792): 65px tall, 20px side padding, same header whether collapsed or expanded */
+.kn-bar { position: relative; height: 64px; }
+.kn-stack { position: absolute; left: 20px; top: 16.5px; display: flex; align-items: center; }
+.kn-av { position: relative; width: 32px; height: 32px; margin-right: -16px; flex-shrink: 0; border: 2px solid #fff; border-radius: 100px; background: #f1b2b2; overflow: hidden; }
 .kn-av img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .kn-more { position: relative; width: 32px; height: 32px; flex-shrink: 0; border: 2px solid #fff; border-radius: 100px; background: #f1f1f1; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #717171; }
-.kn-text { position: absolute; left: 127.99px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; transition: transform .48s cubic-bezier(.22,1,.36,1); }
+.kn-text { position: absolute; left: 128px; top: 16.5px; display: flex; flex-direction: column; }
 .kn-title { font-size: 14px; color: #000; white-space: nowrap; }
 .kn-title b { font-weight: 700; }
 .kn-sub { font-size: 12px; color: #717171; white-space: nowrap; }
 .kn-edit {
-  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
-  display: flex; align-items: center; justify-content: center; gap: 8px; width: 88px; padding: 8px 0;
+  position: absolute; right: 20px; top: 16px;
+  display: flex; align-items: center; justify-content: center; gap: 8px; width: 88px; padding: 7px 0;
   background: #fff; border: 1px solid #e3e3e3; border-radius: 100px;
   font-size: 14px; font-weight: 500; color: #1c1c1c; white-space: nowrap;
 }
@@ -232,15 +233,8 @@ b.stat-row { height: 15.594px; }
 .known.open .kn-edit .i-edit { display: none; }
 .known.open .kn-edit { width: 90px; padding: 7px 0; background: #1c1c1c; border-color: #1c1c1c; color: #fff; }
 .known.open .kn-edit:hover { background: #333; }
-.kn-edit { transition: transform .48s cubic-bezier(.22,1,.36,1); }
-/* Expanded header: stack 20px in with tighter overlap, everything 4px lower, Save 20px from the edge */
-.known.open .kn-stack { transform: translate(8px, calc(-50% + 4px)); }
-.known.open .kn-av { margin-right: -16px; }
-.known.open .kn-more { color: #000; }
-.known.open .kn-text { transform: translateY(calc(-50% + 4px)); }
-.known.open .kn-edit { transform: translate(-8px, calc(-50% + 4.5px)); }
 /* Expanded (Figma 15183:63728): divider inset 12px, then a grey creator card with its own pager below */
-.kn-deck { position: absolute; left: 0; right: 0; top: 56px; bottom: 0; }
+.kn-deck { position: absolute; left: 0; right: 0; top: 64px; bottom: 0; }
 /* V3 table (Figma 15214:112853): grey header strip edge to edge, rows inset 20px */
 .kn-table { display: none; position: absolute; left: 0; right: 0; top: 64px; bottom: 0; }
 .known.as-table .kn-table { display: block; }
@@ -250,9 +244,9 @@ b.stat-row { height: 15.594px; }
 .kt-foryou { position: absolute; left: 285.5px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 13px; font-size: 12px; font-weight: 500; color: #717171; }
 .kt-actions { position: absolute; right: 19.5px; top: calc(50% - 7.5px); }
 .kt-rows { position: absolute; left: 20px; right: 20px; top: 41px; }
-.kt-rows .pop-row .cc-tag { left: 267px; }
+.kt-rows .pop-row .cc-tag { left: 265.5px; }
 .kn-card {
-  left: 20px; top: 13px; width: 590px; height: 491px;
+  left: 20px; top: 5px; width: 590px; height: 491px;
   background: #fafafa; border: 0.5px solid #c6c6c6; border-radius: 12px;
 }
 .kn-card .dc-body { left: 16px; top: 16px; width: 558px; gap: 20px; }
@@ -266,7 +260,7 @@ b.stat-row { height: 15.594px; }
 /* Pager */
 .pager { position: absolute; left: 252px; top: 690px; width: 173px; height: 26px; z-index: 2; }
 #knownPager { left: 228.5px; top: 583px; }   /* inside the expanded block, travels with it */
-#suggestPager { transform-origin: 50% -273px; }   /* scale around the card's centre so both move as one */
+#suggestPager { transform-origin: 50% -270px; }   /* scale around the card's centre so both move as one */
 .pager-btn { position: absolute; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; }
 .pager-btn img { width: 16px; height: 16px; }
 .pg-prev { left: -0.5px; }
@@ -436,10 +430,11 @@ b.stat-row { height: 15.594px; }
 .pr-name b { font-size: 13px; font-weight: 600; color: #000; text-decoration: underline; text-underline-position: from-font; white-space: nowrap; }
 .pr-name img { width: 12px; height: 12px; }
 .pr-sub { font-size: 12px; color: #717171; white-space: nowrap; }
-.pop-row .cc-tag { position: absolute; left: 349px; top: 50%; transform: translateY(-50%); }
+/* Table tags + Add button: 12px text (Figma 15214:112174) */
+.pop-row .cc-tag { position: absolute; left: 348.5px; top: 50%; transform: translateY(-50%); font-size: 12px; font-weight: 400; line-height: 9px; }
 .mini { position: absolute; right: 0; top: 50%; transform: translateY(-50%); height: 28px; display: flex; align-items: center; }
 .mini button { height: 100%; display: flex; align-items: center; justify-content: center; transition: background .15s, border-color .15s, color .15s; }
-.mini-add { width: 76px; gap: 4px; padding: 5px 1px; border: 1px solid #c6c6c6; border-radius: 24px 0 0 24px; background: #fff; font-size: 14px; font-weight: 500; color: #1c1c1c; white-space: nowrap; }
+.mini-add { width: 76px; gap: 4px; padding: 5px 1px; border: 1px solid #c6c6c6; border-radius: 24px 0 0 24px; background: #fff; font-size: 12px; font-weight: 500; color: #1c1c1c; white-space: nowrap; }
 .mini-star { width: 28px; padding: 4px 6px 4px 4px; border: 1px solid #c6c6c6; border-left: 0; border-radius: 0 24px 24px 0; background: #fff; }
 .mini-star img { width: 16px; height: 16px; }
 .mini:not(.added) .mini-add:hover, .mini:not(.prio) .mini-star:hover { background: #fafafa; }

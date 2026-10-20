@@ -93,7 +93,13 @@ const profileHTML = c => `
 // Clicks mid-swipe fast-forward the swipe; rapid clicks queue.
 const DECK = 'translateY(6px) scale(.96)';   // a card waiting just behind the top one
 const OFFSCREEN = 'translate(-1000px, 80px) rotate(-18deg)';
-const INTO_PANEL = 'translate(520px, -30px) scale(.22)';   // card centre → middle of the shortlist panel
+// Where an added card flies to: from its own centre to the upper middle of the shortlist list
+function intoPanel(el) {
+  const r = el.getBoundingClientRect(), t = document.querySelector('.lists').getBoundingClientRect();
+  const dx = t.left + t.width / 2 - (r.left + r.width / 2);
+  const dy = t.top + 120 - (r.top + r.height / 2);
+  return `translate(${dx}px, ${dy}px) scale(.22)`;
+}
 
 // Cards use the 16px plus (Figma 15204 / 15212); Added shows the 12px check
 function setAddIcon(split, added) {
@@ -102,6 +108,8 @@ function setAddIcon(split, added) {
   img.src = `assets/${added ? 'check-12' : big ? 'plus-16' : 'plus-12'}.svg`;
   img.width = img.height = big ? 16 : 12;
 }
+
+const modalEl = document.getElementById('modal');
 
 function makeDeck({ card, body, list, pager }) {
   const deck = { card, body, list, pager, index: 0, running: null, queue: Promise.resolve(), pending: null };
@@ -134,13 +142,22 @@ function makeDeck({ card, body, list, pager }) {
     renderPager(deck);
   };
 
-  const flyingCopy = () => {
+  // escape: the copy goes straight into the modal (not the card's own container), so a card
+  // inside the expanded edit block can still fly out of it into the shortlist panel
+  const flyingCopy = (escape = false) => {
     const el = card.cloneNode(true);
     el.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'));
     el.removeAttribute('id');
     el.classList.add('ghost');
     el.style.zIndex = 2;
-    card.after(el);
+    if (escape && card.parentElement !== modalEl) {
+      const r = card.getBoundingClientRect(), m = modalEl.getBoundingClientRect();
+      Object.assign(el.style, {
+        left: r.left - m.left - modalEl.clientLeft + 'px', top: r.top - m.top - modalEl.clientTop + 'px',
+        width: r.width + 'px', height: r.height + 'px', right: 'auto', bottom: 'auto',
+      });
+      modalEl.appendChild(el);
+    } else card.after(el);
     return el;
   };
 
@@ -153,7 +170,7 @@ function makeDeck({ card, body, list, pager }) {
   deck.swap = (direction, change) => {
     finishRunning();
     card.classList.add('no-tx');
-    const old = flyingCopy();
+    const old = flyingCopy(direction === 'add');
     change();
     let anims, incoming;
     if (reduceMotion) {
@@ -166,7 +183,7 @@ function makeDeck({ card, body, list, pager }) {
       // next card dissolves up in its place
       old.style.transformOrigin = '50% 50%';
       anims = [
-        old.animate([{ transform: 'none' }, { transform: INTO_PANEL }], { duration: 560, easing: 'cubic-bezier(.55, 0, .25, 1)', fill: 'forwards' }),
+        old.animate([{ transform: 'none' }, { transform: intoPanel(old) }], { duration: 560, easing: 'cubic-bezier(.55, 0, .25, 1)', fill: 'forwards' }),
         old.animate([{ opacity: 1 }, { opacity: 1, offset: .5 }, { opacity: 0 }], { duration: 560, easing: 'linear', fill: 'forwards' }),
         card.animate([{ transform: DECK, opacity: 0 }, { transform: 'none', opacity: 1 }],
           { duration: 440, delay: 220, easing: EASE_OUT, fill: 'backwards' }),
@@ -232,8 +249,10 @@ function makeDeck({ card, body, list, pager }) {
     const c = deck.current();
     if (!btn || !c) return;
     const act = btn.dataset.act;
-    // Suggestions: Add / ⚡ sends the card into the shortlist panel and it leaves the deck
-    if (c.source === 'suggested' && (act === 'add' || act === 'prio')) {
+    // Add / ⚡ (turning on) sends the card into the shortlist panel. Suggestions then leave
+    // the deck; creators you know stay in it and the deck moves on to the next one.
+    const turningOn = act === 'add' ? !c.shortlisted : act === 'prio' && !c.priority;
+    if (turningOn) {
       if (deck.sending) return;
       deck.sending = true;
       const split = card.querySelector('.split');   // show the new state for a beat first
@@ -243,17 +262,16 @@ function makeDeck({ card, body, list, pager }) {
       split.querySelector('.l-add').textContent = 'Added';
       setTimeout(() => {
         deck.sending = false;
-        deck.swap('add', () => act === 'prio' ? api.setPriority(c.id, true) : api.setShortlisted(c.id, true));
+        deck.swap('add', () => {
+          act === 'prio' ? api.setPriority(c.id, true) : api.setShortlisted(c.id, true);
+          if (c.source === 'known' && deck.index < deck.list().length - 1) { deck.index++; deck.render(); }
+        });
       }, reduceMotion ? 0 : 200);
       return;
     }
-    if (act === 'add') {
-      if (c.shortlisted) return api.setShortlisted(c.id, false);
-      api.setShortlisted(c.id, true); advanceSoon();
-    } else if (act === 'prio') {
-      if (c.priority) return api.setPriority(c.id, false);
-      api.setPriority(c.id, true); advanceSoon();
-    } else if (act === 'skip') {
+    if (act === 'add') api.setShortlisted(c.id, false);   // turning off: stays on this card
+    else if (act === 'prio') api.setPriority(c.id, false);
+    else if (act === 'skip') {
       // Suggestions: "Not a Fit" drops them from the deck. Creators you know: it takes them
       // off the list but keeps their card, so they can be added back.
       if (c.source === 'suggested') deck.swap('next', () => api.dismiss(c.id));
@@ -298,7 +316,7 @@ function renderPager(deck) {
 
 // ---------- Creators you know: collapsed bar ⇄ expanded deck ----------
 const known = $('known');
-const COLLAPSED = 57, EXPANDED_DECK = 635;   // V3's table block is 578 (set in setKnownOpen)   // bar height → bar + card + pager (bottom lines up with the shortlist panel)
+const COLLAPSED = 65, EXPANDED_DECK = 635;   // bar → bar + card + pager (bottom lines up with the shortlist panel); V3's table block is 578
 let knownAnims = [];
 
 function stackHTML(people, max, cls) {
