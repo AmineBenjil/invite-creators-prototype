@@ -181,9 +181,9 @@ b.stat-row { height: 15.594px; }
 .split-star { padding: 5px 13px 5px 9px; border: 1px solid #c6c6c6; border-radius: 0 24px 24px 0; }
 .split-star img { width: 20px; height: 20px; }
 .split:not(.added) button:hover { background: #fafafa; }
-.split.added .split-add { padding: 5px 1px; background: #f5f3fc; border: 1px solid #7a5cfa; color: #7a5cfa; }
+.split.added .split-add { width: 86px; padding: 5px 12px 5px 9px; background: #f5f3fc; border: 1px solid #7a5cfa; border-right: 0; color: #7a5cfa; }   /* Figma 15279:15047 */
 .split.added .split-star { padding: 5px 13px 5px 8px; border-left: 0; }
-.split.prio .split-star { padding: 4px 12px 4px 8px; background: #7a5cfa; border: 0; }
+.split.prio .split-star { padding: 5px 13px 5px 9px; background: #7a5cfa; border: 1px solid #7a5cfa; }
 .split.prio .split-star img { filter: brightness(0) invert(1); }
 
 /* Hover tooltips on Add / ⚡: appear after a 1.5s hover, vanish as soon as the pointer leaves */
@@ -254,8 +254,8 @@ b.stat-row { height: 15.594px; }
 .kn-card .dc-foot { padding: 12px 16px; background: #fafafa; border-top: 0.5px solid #e3e3e3; }
 .kn-card .btn-ghost { color: #6a6a6a; }
 .kn-card .split-add { gap: 8px; }
+.sg-card .split.added .split-add, .kn-card .split.added .split-add { gap: 4px; }
 .kn-card .split:not(.added) .split-add, .kn-card .split:not(.added) .split-star { border-color: #e3e3e3; }
-.kn-card .split.added .split-add { color: #1c1c1c; }
 
 /* Pager */
 .pager { position: absolute; left: 252px; top: 690px; width: 173px; height: 26px; z-index: 2; }

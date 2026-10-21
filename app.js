@@ -104,9 +104,7 @@ function intoPanel(el) {
 // Cards use the 16px plus (Figma 15204 / 15212); Added shows the 12px check
 function setAddIcon(split, added) {
   const img = split.querySelector('.i-add');
-  const big = !added;
-  img.src = `assets/${added ? 'check-12' : big ? 'plus-16' : 'plus-12'}.svg`;
-  img.width = img.height = big ? 16 : 12;
+  img.src = `assets/${added ? 'check-16' : 'plus-16'}.svg`;   // Figma 15279:15047
 }
 
 const modalEl = document.getElementById('modal');
@@ -589,7 +587,7 @@ const knownRowHTML = c => `
       <span class="cc-tag ${c.tag}"><img src="assets/${TAGS[c.tag].icon}" alt="">${TAGS[c.tag].label}</span>
       <div class="mini${c.shortlisted ? ' added' : ''}${c.priority ? ' prio' : ''}">
         <button class="mini-add" data-act="add" aria-label="${c.shortlisted ? 'Remove' : 'Add'} ${c.name}">
-          <img src="assets/${c.shortlisted ? 'check-12' : 'plus-12'}.svg" alt="" width="12" height="12">${c.shortlisted ? 'Added' : 'Add'}
+          <img src="assets/${c.shortlisted ? 'check-16' : 'plus-12'}.svg" alt="" width="12" height="12">${c.shortlisted ? 'Added' : 'Add'}
         </button>
         <button class="mini-star" data-act="prio" aria-label="Priority invite for ${c.name}">
           <img src="assets/prio-20${c.priority ? '-white' : ''}.svg" alt="" width="16" height="16">
